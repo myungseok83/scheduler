@@ -1,0 +1,2430 @@
+<!DOCTYPE html>
+<!-- 시험 스케줄 관리 시스템 V1.21.0 (메모 카테고리 사용자 관리 기능) -->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>시험 스케줄 관리 시스템</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body { font-family:'Pretendard', sans-serif; background:linear-gradient(135deg,#f8faff 0%,#eff2f9 100%); }
+  .glass-card { background:rgba(255,255,255,.85); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,.6); box-shadow:0 8px 32px rgba(31,38,135,.07); }
+  .custom-scrollbar::-webkit-scrollbar{width:6px;height:6px;}
+  .custom-scrollbar::-webkit-scrollbar-track{background:#f1f5f9;}
+  .custom-scrollbar::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:10px;}
+  /* 브라우저 주소창/북마크바 등을 감안해 vh% 대신 "화면높이-고정여백" 방식으로 계산 (V1.12.0) */
+  .view-scroll-area{max-height:calc(100vh - 300px); min-height:160px;}
+  .calendar-day-box{min-height:110px;background:#fff;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:6px;display:flex;flex-direction:column;gap:3px;}
+  .calendar-day-box.is-today{background:#eef2ff;box-shadow:inset 0 0 0 2px #6366f1;position:relative;}
+  .calendar-day-box.weekend-sun-shade{background:#fee2e2;}
+  .calendar-day-box.weekend-sat-shade{background:#dbeafe;}
+  .calendar-day-box.holiday-col-shade{background:#fca5a5;}
+  .calendar-day-box.empty{background:#f8fafc;}
+  .calendar-item-chip{font-size:10px;padding:2px 6px;border-radius:5px;color:#fff;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
+  #loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.8);z-index:3000;display:none;flex-direction:column;align-items:center;justify-content:center;}
+  .spinner{width:40px;height:40px;border:4px solid #f3f3f3;border-top:4px solid #6366f1;border-radius:50%;animation:spin 1s linear infinite;}
+  @keyframes spin{100%{transform:rotate(360deg);}}
+  .role-badge-admin{background:#eef2ff;color:#4f46e5;border:1px solid #c7d2fe;}
+  .role-badge-editor{background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;}
+  .role-badge-viewer{background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;}
+  .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:200;display:none;align-items:center;justify-content:center;padding:1rem;}
+  .toast{position:fixed;bottom:24px;right:24px;background:#0f172a;color:#fff;padding:12px 20px;border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,.25);z-index:3500;font-size:13px;font-weight:600;transform:translateY(20px);opacity:0;transition:all .3s;}
+  .toast.show{transform:translateY(0);opacity:1;}
+  .tab-btn{padding:.6rem 1.4rem;border-radius:.75rem;font-size:.85rem;font-weight:700;color:#64748b;transition:all .15s;}
+  .tab-btn.active{background:#0f172a;color:#fff;box-shadow:0 4px 10px rgba(0,0,0,.15);}
+  .field-label{font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;}
+  .field-input{width:100%;padding:.65rem .8rem;background:#f8fafc;border-radius:.7rem;border:1px solid transparent;outline:none;font-weight:600;font-size:.85rem;transition:all .15s;}
+  .field-input:focus{border-color:#a5b4fc;background:#fff;}
+</style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+<div id="loading-overlay"><div class="spinner mb-4"></div><p class="font-bold text-slate-600 text-sm">서버와 통신 중입니다...</p></div>
+<div id="toast" class="toast"></div>
+<div id="status-popover" class="hidden fixed z-[500] bg-white rounded-lg shadow-xl border border-slate-200 p-1 flex gap-1" onmouseenter="cancelHideStatusPopover()" onmouseleave="scheduleHideStatusPopover()">
+  <button onclick="setBarProgressStatus('완료')" class="text-[10px] font-bold px-2 py-1 rounded hover:bg-slate-100 whitespace-nowrap">✅ 완료</button>
+  <button onclick="setBarProgressStatus('진행')" class="text-[10px] font-bold px-2 py-1 rounded hover:bg-slate-100 whitespace-nowrap">🔵 진행</button>
+  <button onclick="setBarProgressStatus('지연')" class="text-[10px] font-bold px-2 py-1 rounded hover:bg-slate-100 whitespace-nowrap">⚠️ 지연</button>
+</div>
+
+<!-- ===================== 화면 0: 서버(구글시트) 연결 설정 ===================== -->
+<div id="screen-setup" class="hidden max-w-lg mx-auto mt-16">
+  <div class="glass-card rounded-[32px] p-8">
+    <div class="flex items-center gap-3 mb-2">
+      <div class="bg-indigo-600 p-3 rounded-2xl shadow-lg"><span class="text-white text-xl">🔗</span></div>
+      <div>
+        <h1 class="text-xl font-black text-slate-800">서버 연결 설정</h1>
+        <p class="text-xs text-slate-400 font-semibold">최초 1회, 구글시트 Apps Script 웹앱 URL을 등록해주세요</p>
+      </div>
+    </div>
+    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-[11px] text-amber-800 leading-relaxed my-5 space-y-1">
+      <p class="font-bold">📋 설치 순서</p>
+      <p>1. 새 구글 스프레드시트 생성 → 확장 프로그램 → Apps Script</p>
+      <p>2. 함께 전달드린 <b>gas_code_V1.14.0.gs</b> 코드 전체를 붙여넣기</p>
+      <p>3. 배포 → 새 배포 → 웹 앱 (실행: 나, 액세스: 전체) → 배포</p>
+      <p>4. 발급된 웹 앱 URL을 아래에 붙여넣고 연결하세요</p>
+    </div>
+    <label class="field-label">Google Apps Script 웹앱 URL</label>
+    <input id="setup-url-input" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="field-input mb-4">
+    <button onclick="testAndSaveGasUrl()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all">연결 테스트 후 시작하기</button>
+    <p id="setup-error" class="text-rose-500 text-xs font-bold mt-3 hidden"></p>
+  </div>
+</div>
+
+<!-- ===================== 화면 1: 로그인 / 회원가입 ===================== -->
+<div id="screen-auth" class="hidden max-w-md mx-auto mt-16">
+  <div class="glass-card rounded-[32px] p-8">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="bg-indigo-600 p-3 rounded-2xl shadow-lg"><span class="text-white text-xl">🧪</span></div>
+      <div>
+        <h1 class="text-xl font-black text-slate-800">시험 스케줄 관리 시스템</h1>
+        <p class="text-[11px] text-indigo-500 font-bold uppercase tracking-wide">V1.21.0</p>
+      </div>
+    </div>
+    <div class="flex bg-slate-100 p-1 rounded-xl mb-6">
+      <button id="auth-tab-login" onclick="switchAuthTab('login')" class="flex-1 tab-btn active !text-xs !py-2">로그인</button>
+      <button id="auth-tab-register" onclick="switchAuthTab('register')" class="flex-1 tab-btn !text-xs !py-2">회원가입</button>
+    </div>
+
+    <form id="form-login" onsubmit="handleLogin(event)" class="space-y-4">
+      <div><label class="field-label">아이디</label><input id="login-username" type="text" required class="field-input"></div>
+      <div><label class="field-label">비밀번호</label><input id="login-password" type="password" required class="field-input"></div>
+      <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all">로그인</button>
+      <p class="text-[10px] text-slate-400 text-center">최초 관리자 계정이 없다면 회원가입 탭에서 첫 번째로 가입하는 사람이 자동으로 관리자가 됩니다.</p>
+    </form>
+
+    <form id="form-register" onsubmit="handleRegister(event)" class="space-y-4 hidden">
+      <div><label class="field-label">이름</label><input id="reg-name" type="text" required class="field-input"></div>
+      <div><label class="field-label">아이디</label><input id="reg-username" type="text" required class="field-input"></div>
+      <div><label class="field-label">비밀번호</label><input id="reg-password" type="password" required class="field-input"></div>
+      <div><label class="field-label">비밀번호 확인</label><input id="reg-password2" type="password" required class="field-input"></div>
+      <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl shadow-lg transition-all">회원가입</button>
+      <p class="text-[10px] text-slate-400 text-center">가입 후에는 조회(뷰어) 권한으로 시작하며, 필요 시 관리자에게 편집 권한을 요청할 수 있습니다.</p>
+    </form>
+    <p id="auth-error" class="text-rose-500 text-xs font-bold mt-3 hidden text-center"></p>
+    <p id="auth-success" class="text-emerald-500 text-xs font-bold mt-3 hidden text-center"></p>
+    <button onclick="openSetupFromAuth()" class="w-full text-[10px] text-slate-400 hover:text-slate-600 mt-5 font-bold">⚙️ 서버 연결 주소 변경</button>
+  </div>
+</div>
+
+<!-- ===================== 화면 2: 메인 앱 ===================== -->
+<div id="screen-app" class="hidden max-w-[1500px] mx-auto">
+  <header class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+    <div class="flex items-center gap-4">
+      <div class="bg-indigo-600 p-3 rounded-2xl shadow-lg"><span class="text-white text-2xl">🧪</span></div>
+      <div>
+        <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">시험 스케줄 관리 시스템
+          <span class="text-xs font-normal bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">V1.21.0</span>
+        </h1>
+        <p class="text-sm text-indigo-500 font-medium">구글시트 연동 · 🔒 업무현황 자동반영</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span id="user-role-badge" class="px-3 py-1.5 rounded-full text-xs font-black role-badge-viewer"></span>
+      <span id="user-name-label" class="text-sm font-bold text-slate-700 mr-1"></span>
+      <button id="btn-request-permission" onclick="openPermissionRequestModal()" class="hidden bg-amber-100 text-amber-700 px-3 py-2 rounded-xl font-bold text-xs hover:bg-amber-200 transition-all">🙋 편집 권한 요청</button>
+      <button id="btn-admin-panel" onclick="openAdminPanel()" class="hidden bg-slate-800 text-white px-3 py-2 rounded-xl font-bold text-xs hover:bg-slate-900 transition-all">⚙️ 관리자 패널</button>
+      <button onclick="loadAllData()" class="bg-white text-slate-600 border border-slate-200 px-3 py-2 rounded-xl font-bold text-xs shadow-sm hover:bg-slate-50 transition-all">🔄</button>
+      <button onclick="logout()" class="bg-white text-rose-500 border border-slate-200 px-3 py-2 rounded-xl font-bold text-xs shadow-sm hover:bg-rose-50 transition-all">로그아웃</button>
+    </div>
+  </header>
+
+  <div class="flex flex-col lg:flex-row items-start gap-5">
+    <!-- 사이드패널: 뷰 전환 + 필터 -->
+    <aside class="glass-card rounded-2xl p-5 w-full lg:w-60 shrink-0 lg:sticky lg:top-5 space-y-5">
+      <div>
+        <span class="text-[11px] font-black text-slate-400 uppercase block mb-2">보기</span>
+        <div class="flex flex-col gap-1">
+          <button id="tab-view-calendar" onclick="switchView('calendar')" class="tab-btn active block w-full text-left">🗓️ 캘린더</button>
+          <button id="tab-view-timeline" onclick="switchView('timeline')" class="tab-btn block w-full text-left">➡️ 타임라인</button>
+          <button id="tab-view-table" onclick="switchView('table')" class="tab-btn block w-full text-left">📋 테이블</button>
+        </div>
+      </div>
+      <div class="border-t border-slate-100"></div>
+      <div class="flex items-center justify-between">
+        <span class="text-[11px] font-black text-slate-400 uppercase">필터</span>
+        <button onclick="resetFilters()" class="text-[10px] font-bold text-slate-400 hover:text-indigo-600">초기화</button>
+      </div>
+      <div>
+        <label class="field-label">그룹</label>
+        <select id="filter-group" onchange="onFilterChange()" class="field-input !bg-slate-50 w-full"></select>
+      </div>
+      <div>
+        <label class="field-label">장비</label>
+        <select id="filter-eq" onchange="onFilterChange()" class="field-input !bg-slate-50 w-full"></select>
+      </div>
+      <div>
+        <label class="field-label">검색</label>
+        <input id="filter-search" oninput="onFilterChange()" placeholder="🔍 제목/담당자" class="field-input !bg-slate-50 w-full">
+      </div>
+      <div class="border-t border-slate-100 pt-4">
+        <button onclick="openMemoModal()" class="w-full bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-bold text-xs py-2.5 rounded-xl transition-all">📝 메모 / 회의록</button>
+      </div>
+    </aside>
+
+    <!-- 메인 콘텐츠 -->
+    <div class="flex-1 min-w-0 w-full">
+
+  <!-- 캘린더 뷰 -->
+  <div id="view-calendar" class="glass-card rounded-[32px] overflow-hidden p-6">
+    <div class="flex justify-between items-center mb-6">
+      <div class="flex items-center gap-3">
+        <button onclick="moveCalendarMonth(-1)" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold">❮</button>
+        <h2 id="cal-month-label" class="text-xl font-black text-slate-800 min-w-[140px] text-center"></h2>
+        <button onclick="moveCalendarMonth(1)" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold">❯</button>
+        <button onclick="currentMonthDate=new Date();renderCurrentView();" class="text-xs font-bold text-indigo-600 hover:underline ml-2">오늘로 이동</button>
+      </div>
+      <button id="btn-holiday-calendar" onclick="openScheduleModal('new', { eqId:'holiday', startDate: fmtISO(currentMonthDate) })" class="hidden bg-rose-50 text-rose-600 border border-rose-200 px-3 py-2 rounded-xl font-bold text-xs hover:bg-rose-100 transition-all">🎌 휴일/이벤트 등록</button>
+    </div>
+    <div class="border border-slate-200 rounded-2xl overflow-hidden">
+      <div class="grid grid-cols-7 bg-slate-50 text-center text-xs font-bold border-b border-slate-200">
+        <div class="p-2 text-rose-500">SUN</div><div class="p-2 text-slate-500">MON</div><div class="p-2 text-slate-500">TUE</div>
+        <div class="p-2 text-slate-500">WED</div><div class="p-2 text-slate-500">THU</div><div class="p-2 text-slate-500">FRI</div><div class="p-2 text-blue-500">SAT</div>
+      </div>
+      <div class="view-scroll-area overflow-y-auto custom-scrollbar">
+        <div id="calendar-grid-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 타임라인 뷰 -->
+  <div id="view-timeline" class="hidden glass-card rounded-[32px] overflow-hidden p-6">
+    <div class="flex justify-between items-center mb-5">
+      <div class="flex items-center gap-3">
+        <button onclick="moveTimelineMonth(-1)" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold">❮</button>
+        <span id="timeline-range-label" class="text-sm font-black text-slate-700 min-w-[180px] text-center"></span>
+        <button onclick="moveTimelineMonth(1)" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold">❯</button>
+        <button onclick="currentMonthDate=new Date();renderCurrentView();" class="text-xs font-bold text-indigo-600 hover:underline ml-2">이번 달</button>
+        <button onclick="goToTodayInTimeline()" class="text-xs font-bold bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-lg hover:bg-indigo-100 ml-1">📍 오늘</button>
+        <button id="btn-holiday-timeline" onclick="openScheduleModal('new', { eqId:'holiday', startDate: fmtISO(currentMonthDate) })" class="hidden bg-rose-50 text-rose-600 border border-rose-200 px-3 py-2 rounded-xl font-bold text-xs hover:bg-rose-100 transition-all ml-2">🎌 휴일/이벤트 등록</button>
+      </div>
+      <p class="text-[11px] text-slate-400 font-semibold">칸을 클릭하면 해당 장비/날짜로 일정을 바로 등록할 수 있어요 (편집 권한 필요)</p>
+    </div>
+    <div class="border border-slate-200 rounded-2xl overflow-hidden">
+      <!-- 상단 가로 스크롤바 (본문이 길어도 위에서 바로 좌우 이동 가능) -->
+      <div id="timeline-topscroll" class="overflow-x-auto overflow-y-hidden custom-scrollbar" style="height:14px;">
+        <div id="timeline-topscroll-inner" style="height:1px;"></div>
+      </div>
+      <!-- 날짜 헤더 (세로 스크롤과 분리되어 항상 고정 표시, 가로 스크롤만 본문과 동기화) -->
+      <div id="timeline-header-wrap" class="overflow-x-hidden bg-white">
+        <div id="timeline-header-inner" class="min-w-max"></div>
+      </div>
+      <!-- 본문: 장비별 일정 (가로+세로 스크롤) -->
+      <div id="timeline-scroll-wrap" class="view-scroll-area overflow-auto custom-scrollbar">
+        <div id="timeline-body" class="min-w-max"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 테이블 뷰 -->
+  <div id="view-table" class="hidden glass-card rounded-[32px] overflow-hidden p-6">
+    <div class="pb-4 mb-2 border-b border-slate-100 flex justify-between items-center">
+      <h2 class="text-lg font-bold text-slate-800">전체 시험 스케줄 목록 <span class="text-indigo-600" id="table-count">(0)</span></h2>
+    </div>
+    <div class="overflow-x-auto custom-scrollbar view-scroll-area border border-slate-200 rounded-2xl">
+      <table class="w-full text-left border-collapse">
+        <thead class="bg-slate-50 sticky top-0 z-10">
+          <tr>
+            <th class="px-5 py-4 text-[10px] font-black text-slate-400 uppercase cursor-pointer" onclick="sortTable('title')">항목명</th>
+            <th class="px-5 py-4 text-[10px] font-black text-slate-400 uppercase cursor-pointer" onclick="sortTable('eqId')">장비</th>
+            <th class="px-5 py-4 text-[10px] font-black text-slate-400 uppercase cursor-pointer text-center" onclick="sortTable('owner')">담당자</th>
+            <th class="px-5 py-4 text-[10px] font-black text-slate-400 uppercase cursor-pointer text-center" onclick="sortTable('duration')">기간</th>
+            <th class="px-5 py-4 text-[10px] font-black text-slate-400 uppercase cursor-pointer text-right" onclick="sortTable('startDate')">시작일</th>
+            <th class="px-5 py-4 text-[10px] font-black text-slate-400 uppercase text-center">액션</th>
+          </tr>
+        </thead>
+        <tbody id="table-body" class="divide-y divide-slate-100"></tbody>
+      </table>
+    </div>
+  </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 모달: 일정 등록/수정/조회 ===================== -->
+<div id="modal-schedule" class="modal-overlay">
+  <div class="glass-card bg-white w-full max-w-lg rounded-[32px] p-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
+    <div class="flex justify-between items-start mb-5">
+      <div class="px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-indigo-100 text-indigo-600" id="modal-schedule-tag">시험 정보</div>
+      <button onclick="closeModal('modal-schedule')" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+    </div>
+    <input id="sch-id" type="hidden">
+    <div class="space-y-4">
+      <div><label class="field-label">항목명</label><input id="sch-title" class="field-input text-lg font-bold"></div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="field-label">사용 장비</label><select id="sch-eqid" class="field-input"></select></div>
+        <div><label class="field-label">담당자</label><input id="sch-owner" class="field-input"></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="field-label">시작일</label><input id="sch-start" type="date" class="field-input"></div>
+        <div><label class="field-label">기간(일)</label><input id="sch-duration" type="number" min="1" class="field-input"></div>
+      </div>
+      <div><label class="field-label">상세 설명</label><textarea id="sch-desc" rows="4" class="field-input resize-none"></textarea></div>
+      <div id="sch-push-appinput-wrap" class="hidden">
+        <label class="flex items-center gap-2 text-xs font-bold text-slate-600 bg-slate-50 rounded-xl p-3 cursor-pointer">
+          <input type="checkbox" id="sch-push-appinput" class="w-4 h-4">
+          🔗 시험계획표에도 반영 — 체크하면 저장 즉시 해당 월별 탭의 빈 칸에도 채워집니다
+        </label>
+      </div>
+      <div id="sch-change-reason-wrap" class="hidden">
+        <label class="field-label">변경 사유 (선택, 내용을 바꾼 경우 기록됩니다)</label>
+        <input id="sch-change-reason" class="field-input" placeholder="예: 장비 점검 일정과 겹쳐 조정">
+      </div>
+    </div>
+    <div class="mt-7 flex justify-between items-center">
+      <button id="sch-delete-btn" onclick="deleteScheduleConfirm()" class="hidden py-2.5 px-4 text-rose-400 text-sm font-bold hover:bg-rose-50 rounded-xl">삭제</button>
+      <div class="flex gap-2 ml-auto">
+        <button onclick="closeModal('modal-schedule')" class="py-2.5 px-5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200">닫기</button>
+        <button id="sch-save-btn" onclick="saveScheduleFromModal()" class="py-2.5 px-6 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700">저장</button>
+      </div>
+    </div>
+    <div id="sch-history-section" class="hidden mt-6 pt-5 border-t border-slate-100">
+      <p class="field-label mb-2">변경 이력</p>
+      <div id="sch-history-list" class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 모달: 드래그/리사이즈 변경 확인 ===================== -->
+<div id="modal-change-confirm" class="modal-overlay">
+  <div class="glass-card bg-white w-full max-w-sm rounded-[32px] p-8">
+    <h3 class="text-lg font-bold text-slate-800 mb-1">📅 일정 변경 확인</h3>
+    <p id="change-confirm-title" class="text-xs text-slate-500 font-semibold mb-4"></p>
+    <div class="bg-slate-50 rounded-xl p-3 text-xs font-semibold text-slate-600 mb-4 space-y-1">
+      <p>기존: <span id="change-confirm-old" class="font-bold text-slate-800"></span></p>
+      <p>변경: <span id="change-confirm-new" class="font-bold text-indigo-600"></span></p>
+    </div>
+    <label class="field-label">변경 사유 (선택)</label>
+    <input id="change-confirm-reason" class="field-input mb-5" placeholder="예: 장비 점검 일정과 겹쳐 조정">
+    <div class="flex gap-2 justify-end">
+      <button onclick="cancelChangeConfirm()" class="py-2.5 px-5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200">취소</button>
+      <button onclick="confirmChangeConfirm()" class="py-2.5 px-6 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700">변경 저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 모달: 메모 / 회의록 ===================== -->
+<div id="modal-memo" class="modal-overlay">
+  <div class="glass-card bg-white w-full max-w-lg rounded-[32px] p-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
+    <div class="flex justify-between items-start mb-4">
+      <h3 class="text-lg font-bold text-slate-800">📝 메모 / 회의록</h3>
+      <button onclick="closeModal('modal-memo')" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+    </div>
+
+    <div class="flex bg-slate-100 p-1 rounded-xl mb-5 w-fit">
+      <button id="memo-tab-date" onclick="switchMemoTab('date')" class="tab-btn active !text-xs !py-2">📅 날짜별</button>
+      <button id="memo-tab-all" onclick="switchMemoTab('all')" class="tab-btn !text-xs !py-2">📋 전체 목록</button>
+    </div>
+
+    <!-- 날짜별 보기 -->
+    <div id="memo-view-date">
+      <label class="field-label">날짜</label>
+      <div class="flex items-center gap-2 mb-4">
+        <button onclick="moveMemoDate(-1)" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold shrink-0">❮</button>
+        <input type="date" id="memo-date-picker" onchange="loadMemosForSelectedDate()" class="field-input">
+        <button onclick="moveMemoDate(1)" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold shrink-0">❯</button>
+      </div>
+
+      <div id="memo-list" class="space-y-2 mb-5"></div>
+
+      <div class="border-t border-slate-100 pt-4">
+        <input id="memo-id" type="hidden">
+        <div class="grid grid-cols-3 gap-3 mb-3">
+          <div class="col-span-2">
+            <label class="field-label">제목</label>
+            <input id="memo-title" class="field-input" placeholder="예: 주간 회의록, 장비 점검 메모 등">
+          </div>
+          <div>
+            <label class="field-label flex items-center justify-between">분류 <button type="button" onclick="openMemoCategoryManageModal()" class="text-indigo-500 hover:text-indigo-700 normal-case font-bold">⚙️ 관리</button></label>
+            <select id="memo-category" class="field-input"></select>
+          </div>
+        </div>
+        <label class="field-label">내용</label>
+        <textarea id="memo-content" rows="5" class="field-input resize-none mb-2" placeholder="회의 내용, 결정사항, 특이사항 등을 자유롭게 적어주세요. (이미지는 Ctrl+V로 붙여넣을 수 있어요)"></textarea>
+
+        <label class="field-label">이미지 첨부</label>
+        <div id="memo-image-dropzone" class="border-2 border-dashed border-slate-200 rounded-xl p-3 mb-2 text-center text-[11px] text-slate-400 font-semibold cursor-pointer hover:border-amber-300 hover:bg-amber-50/50 transition-all" onclick="document.getElementById('memo-image-file-input').click()">
+          📎 클릭해서 파일 선택 또는 이 영역을 클릭 후 Ctrl+V로 캡쳐 이미지 붙여넣기
+        </div>
+        <input type="file" id="memo-image-file-input" accept="image/*" multiple class="hidden" onchange="handleMemoImageFileSelect(event)">
+        <div id="memo-image-previews" class="flex flex-wrap gap-2 mb-4"></div>
+
+        <div class="flex justify-end gap-2">
+          <button id="memo-cancel-edit-btn" onclick="resetMemoForm()" class="hidden py-2.5 px-5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200">취소</button>
+          <button onclick="saveMemoEntry()" class="py-2.5 px-6 bg-amber-500 text-white font-bold rounded-xl shadow-lg hover:bg-amber-600">저장</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 전체 목록 보기 -->
+    <div id="memo-view-all" class="hidden">
+      <input id="memo-all-search" oninput="renderAllMemosList()" placeholder="🔍 제목/내용 검색" class="field-input mb-3">
+      <div id="memo-category-filter" class="flex flex-wrap gap-1.5 mb-4"></div>
+      <div id="memo-all-list" class="space-y-3 max-h-[50vh] overflow-y-auto custom-scrollbar"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 모달: 메모 분류 관리 ===================== -->
+<div id="modal-memo-category" class="modal-overlay">
+  <div class="glass-card bg-white w-full max-w-sm rounded-[32px] p-8">
+    <div class="flex justify-between items-start mb-4">
+      <h3 class="text-lg font-bold text-slate-800">🏷️ 메모 분류 관리</h3>
+      <button onclick="closeModal('modal-memo-category')" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+    </div>
+
+    <div id="memo-category-manage-list" class="space-y-2 mb-5 max-h-[40vh] overflow-y-auto custom-scrollbar"></div>
+
+    <div class="border-t border-slate-100 pt-4">
+      <input id="memo-category-edit-id" type="hidden">
+      <label class="field-label">이름</label>
+      <input id="memo-category-name" class="field-input mb-3" placeholder="예: 안전점검">
+      <label class="field-label">아이콘 (이모지 1개)</label>
+      <input id="memo-category-icon" class="field-input mb-3" placeholder="예: 🦺" maxlength="2">
+      <label class="field-label">색상</label>
+      <div id="memo-category-color-picker" class="flex flex-wrap gap-2 mb-4"></div>
+      <div class="flex justify-end gap-2">
+        <button id="memo-category-cancel-btn" onclick="resetMemoCategoryForm()" class="hidden py-2.5 px-5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200">취소</button>
+        <button onclick="saveMemoCategoryEntry()" class="py-2.5 px-6 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 모달: 특정일 전체 일정 목록 ===================== -->
+<div id="modal-daylist" class="modal-overlay">
+  <div class="glass-card bg-white w-full max-w-lg rounded-[32px] p-8 max-h-[80vh] overflow-y-auto custom-scrollbar">
+    <div class="flex justify-between items-start mb-1">
+      <h3 id="daylist-title" class="text-lg font-bold text-slate-800">일정 목록</h3>
+      <button onclick="closeModal('modal-daylist')" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+    </div>
+    <p id="daylist-count" class="text-xs text-slate-400 font-semibold mb-5"></p>
+    <div id="daylist-items" class="space-y-2"></div>
+  </div>
+</div>
+
+<!-- ===================== 모달: 편집 권한 요청 ===================== -->
+<div id="modal-permission" class="modal-overlay">
+  <div class="glass-card bg-white w-full max-w-sm rounded-[32px] p-8">
+    <h3 class="text-lg font-bold text-slate-800 mb-1">🙋 편집 권한 요청</h3>
+    <p class="text-xs text-slate-400 font-semibold mb-5">관리자가 승인하면 일정을 직접 등록/수정할 수 있어요.</p>
+    <label class="field-label">요청 사유 (선택)</label>
+    <textarea id="perm-request-message" rows="3" class="field-input resize-none mb-5" placeholder="예: OO팀 담당자로 일정 등록이 필요합니다."></textarea>
+    <div class="flex gap-2 justify-end">
+      <button onclick="closeModal('modal-permission')" class="py-2.5 px-5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200">취소</button>
+      <button onclick="submitPermissionRequest()" class="py-2.5 px-6 bg-amber-500 text-white font-bold rounded-xl shadow-lg hover:bg-amber-600">요청 보내기</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===================== 모달: 관리자 패널 ===================== -->
+<div id="modal-admin" class="modal-overlay">
+  <div class="glass-card bg-white w-full max-w-2xl rounded-[32px] p-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
+    <div class="flex justify-between items-start mb-5">
+      <h3 class="text-lg font-bold text-slate-800">⚙️ 관리자 패널</h3>
+      <button onclick="closeModal('modal-admin')" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+    </div>
+    <div class="flex bg-slate-100 p-1 rounded-xl mb-5 w-fit">
+      <button id="admin-tab-requests" onclick="switchAdminTab('requests')" class="tab-btn active !text-xs !py-2">권한 요청함</button>
+      <button id="admin-tab-users" onclick="switchAdminTab('users')" class="tab-btn !text-xs !py-2">회원 관리</button>
+      <button id="admin-tab-holidays" onclick="switchAdminTab('holidays')" class="tab-btn !text-xs !py-2">🎌 공휴일 일괄등록</button>
+    </div>
+    <div id="admin-panel-requests"></div>
+    <div id="admin-panel-users" class="hidden"></div>
+    <div id="admin-panel-holidays" class="hidden">
+      <p class="text-xs text-slate-500 font-semibold mb-4 leading-relaxed">
+        2026~2035년 대한민국 법정공휴일(대체공휴일 포함, 총 194건)을 '공휴일/휴일' 항목으로 한 번에 등록합니다.<br>
+        이미 등록된 항목(같은 날짜·같은 이름)은 자동으로 건너뜁니다. 2031~2035년은 아직 정부 공식 고시 전이라 추정치가 일부 포함되어 있습니다.
+      </p>
+      <button id="btn-bulk-add-holidays" onclick="bulkAddHolidays()" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 rounded-xl shadow-lg transition-all">🎌 2026~2035년 공휴일 일괄 등록하기</button>
+      <p id="bulk-holidays-result" class="text-xs font-bold text-center mt-3"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   시험 스케줄 관리 시스템 V1.21.0
+   - 구글 Apps Script(GAS) 웹앱을 백엔드로 사용
+   - 로그인/회원가입, 관리자-편집자-뷰어 권한, 캘린더/타임라인/테이블 뷰
+===================================================================== */
+
+const LS_GAS_URL = 'tsm_gas_url';
+const LS_SESSION = 'tsm_session';
+
+let GAS_URL = '';
+let currentUser = null;   // {username, name, role}
+let users = [];
+let schedules = [];
+let permRequests = [];
+
+let currentView = 'calendar';
+let currentMonthDate = new Date(); // 캘린더/타임라인이 공유하는 "현재 보고 있는 달" (V1.8.0: 뷰 간 불일치 방지)
+let filters = { group: 'all', eq: 'all', search: '' };
+let tableSort = { col: 'startDate', dir: 'asc' };
+let editingScheduleReadOnly = false;
+
+// 장비 마스터 데이터 ('업무현황' 시트 실사용 장비 기준, V1.3.0)
+// eqId 접두사는 gas_code_V1.14.0.gs의 mapMasterEquipment()와 반드시 일치해야 자동연동 일정이 올바른 장비에 매칭됩니다.
+const equipments = [
+  { id:'bg_1', name:'배광 1호', group:'배광UNIT', icon:'🎯' },
+  { id:'bg_2', name:'배광 2호', group:'배광UNIT', icon:'🎯' },
+  { id:'ov_1', name:'오븐 1호', group:'고온UNIT', icon:'🔥' },
+  { id:'ov_2', name:'오븐 2호', group:'고온UNIT', icon:'🔥' },
+  { id:'rm2_1', name:'2룸 1호', group:'고온UNIT', icon:'🌡️' },
+  { id:'rm2_2', name:'2룸 2호', group:'고온UNIT', icon:'🌡️' },
+  { id:'hm_1', name:'습기 1호', group:'습기UNIT', icon:'💧' },
+  { id:'hm_2', name:'습기 2호', group:'습기UNIT', icon:'💧' },
+  { id:'hm_3', name:'습기 3호', group:'습기UNIT', icon:'💧' },
+  { id:'env_1', name:'환경챔버/기타 1호', group:'환경UNIT', icon:'🌐' },
+  { id:'env_2', name:'환경챔버/기타 2호', group:'환경UNIT', icon:'🌐' },
+  { id:'env_3', name:'환경챔버/기타 3호', group:'환경UNIT', icon:'🌐' },
+  { id:'env_4', name:'환경챔버/기타 4호', group:'환경UNIT', icon:'🌐' },
+  { id:'env_5', name:'환경챔버/기타 5호', group:'환경UNIT', icon:'🌐' },
+  { id:'env_6', name:'환경챔버/기타 6호', group:'환경UNIT', icon:'🌐' },
+  { id:'env_7', name:'환경챔버/기타 7호', group:'환경UNIT', icon:'🌐' },
+  { id:'env_8', name:'환경챔버/기타 8호', group:'환경UNIT', icon:'🌐' },
+  { id:'vib_1', name:'진동 1호', group:'가속UNIT', icon:'🔊' },
+  { id:'acc_1', name:'장기내열 1호', group:'가속UNIT', icon:'🚀' },
+  { id:'acc_2', name:'장기내열 2호', group:'가속UNIT', icon:'🚀' },
+  { id:'scan_1', name:'스캐너 1호', group:'측정UNIT', icon:'📡' },
+  { id:'cmm_1', name:'CMM', group:'측정UNIT', icon:'📐' },
+  { id:'shk_1', name:'충격 1호', group:'가속UNIT', icon:'🔨' },
+  { id:'etc_1', name:'기타', group:'기타UNIT', icon:'🛠️' },
+  { id:'holiday', name:'공휴일/휴일', group:'휴일', icon:'🎌' },
+  { id:'event', name:'이벤트', group:'이벤트', icon:'📌' }
+];
+const groupColors = { '배광UNIT':'bg-indigo-500', '고온UNIT':'bg-orange-500', '환경UNIT':'bg-emerald-500', '가속UNIT':'bg-purple-500', '습기UNIT':'bg-sky-500', '측정UNIT':'bg-cyan-500', '기타UNIT':'bg-slate-500', '휴일':'bg-rose-500', '이벤트':'bg-amber-500' };
+
+// 대한민국 법정공휴일 10년치 (V1.14.0, 관리자 패널 일괄등록용) — 2026~2030 공공기관 고시 기반, 2031~2033 나무위키 연도별 문서 확인, 2034~2035 음력계산 추정치
+const KOREAN_HOLIDAYS_2026_2035 = [
+  { date:'2026-01-01', name:'신정' },
+  { date:'2026-02-16', name:'설날 연휴' },
+  { date:'2026-02-17', name:'설날' },
+  { date:'2026-02-18', name:'설날 연휴' },
+  { date:'2026-03-01', name:'삼일절' },
+  { date:'2026-03-02', name:'대체공휴일(삼일절)' },
+  { date:'2026-05-01', name:'근로자의 날' },
+  { date:'2026-05-05', name:'어린이날' },
+  { date:'2026-05-24', name:'부처님오신날' },
+  { date:'2026-05-25', name:'대체공휴일(부처님오신날)' },
+  { date:'2026-06-06', name:'현충일' },
+  { date:'2026-07-17', name:'제헌절' },
+  { date:'2026-08-15', name:'광복절' },
+  { date:'2026-08-17', name:'대체공휴일(광복절)' },
+  { date:'2026-09-24', name:'추석 연휴' },
+  { date:'2026-09-25', name:'추석' },
+  { date:'2026-09-26', name:'추석 연휴' },
+  { date:'2026-10-03', name:'개천절' },
+  { date:'2026-10-05', name:'대체공휴일(개천절)' },
+  { date:'2026-10-09', name:'한글날' },
+  { date:'2026-12-25', name:'크리스마스' },
+  { date:'2027-01-01', name:'신정' },
+  { date:'2027-02-06', name:'설날 연휴' },
+  { date:'2027-02-07', name:'설날' },
+  { date:'2027-02-08', name:'설날 연휴' },
+  { date:'2027-02-09', name:'대체공휴일(설날)' },
+  { date:'2027-03-01', name:'삼일절' },
+  { date:'2027-05-01', name:'근로자의 날' },
+  { date:'2027-05-05', name:'어린이날' },
+  { date:'2027-05-13', name:'부처님오신날' },
+  { date:'2027-06-06', name:'현충일' },
+  { date:'2027-07-17', name:'제헌절' },
+  { date:'2027-08-15', name:'광복절' },
+  { date:'2027-08-16', name:'대체공휴일(광복절)' },
+  { date:'2027-09-14', name:'추석 연휴' },
+  { date:'2027-09-15', name:'추석' },
+  { date:'2027-09-16', name:'추석 연휴' },
+  { date:'2027-10-03', name:'개천절' },
+  { date:'2027-10-04', name:'대체공휴일(개천절)' },
+  { date:'2027-10-09', name:'한글날' },
+  { date:'2027-10-11', name:'대체공휴일(한글날)' },
+  { date:'2027-12-25', name:'크리스마스' },
+  { date:'2027-12-27', name:'대체공휴일(크리스마스)' },
+  { date:'2028-01-01', name:'신정' },
+  { date:'2028-01-26', name:'설날 연휴' },
+  { date:'2028-01-27', name:'설날' },
+  { date:'2028-01-28', name:'설날 연휴' },
+  { date:'2028-03-01', name:'삼일절' },
+  { date:'2028-05-01', name:'근로자의 날' },
+  { date:'2028-05-02', name:'부처님오신날' },
+  { date:'2028-05-05', name:'어린이날' },
+  { date:'2028-06-06', name:'현충일' },
+  { date:'2028-07-17', name:'제헌절' },
+  { date:'2028-08-15', name:'광복절' },
+  { date:'2028-10-02', name:'추석 연휴' },
+  { date:'2028-10-03', name:'추석·개천절' },
+  { date:'2028-10-04', name:'추석 연휴' },
+  { date:'2028-10-05', name:'대체공휴일(개천절)' },
+  { date:'2028-10-09', name:'한글날' },
+  { date:'2028-12-25', name:'크리스마스' },
+  { date:'2029-01-01', name:'신정' },
+  { date:'2029-02-12', name:'설날 연휴' },
+  { date:'2029-02-13', name:'설날' },
+  { date:'2029-02-14', name:'설날 연휴' },
+  { date:'2029-03-01', name:'삼일절' },
+  { date:'2029-05-01', name:'근로자의 날' },
+  { date:'2029-05-05', name:'어린이날' },
+  { date:'2029-05-07', name:'대체공휴일(어린이날)' },
+  { date:'2029-05-20', name:'부처님오신날' },
+  { date:'2029-05-21', name:'대체공휴일(부처님오신날)' },
+  { date:'2029-06-06', name:'현충일' },
+  { date:'2029-07-17', name:'제헌절' },
+  { date:'2029-08-15', name:'광복절' },
+  { date:'2029-09-21', name:'추석 연휴' },
+  { date:'2029-09-22', name:'추석' },
+  { date:'2029-09-23', name:'추석 연휴' },
+  { date:'2029-09-24', name:'대체공휴일(추석)' },
+  { date:'2029-10-03', name:'개천절' },
+  { date:'2029-10-09', name:'한글날' },
+  { date:'2029-12-25', name:'크리스마스' },
+  { date:'2030-01-01', name:'신정' },
+  { date:'2030-02-02', name:'설날 연휴' },
+  { date:'2030-02-03', name:'설날' },
+  { date:'2030-02-04', name:'설날 연휴' },
+  { date:'2030-02-05', name:'대체공휴일(설날)' },
+  { date:'2030-03-01', name:'삼일절' },
+  { date:'2030-05-01', name:'근로자의 날' },
+  { date:'2030-05-05', name:'어린이날' },
+  { date:'2030-05-06', name:'대체공휴일(어린이날)' },
+  { date:'2030-05-09', name:'부처님오신날' },
+  { date:'2030-06-06', name:'현충일' },
+  { date:'2030-07-17', name:'제헌절' },
+  { date:'2030-08-15', name:'광복절' },
+  { date:'2030-09-11', name:'추석 연휴' },
+  { date:'2030-09-12', name:'추석' },
+  { date:'2030-09-13', name:'추석 연휴' },
+  { date:'2030-10-03', name:'개천절' },
+  { date:'2030-10-09', name:'한글날' },
+  { date:'2030-12-25', name:'크리스마스' },
+  { date:'2031-01-01', name:'신정' },
+  { date:'2031-01-22', name:'설날 연휴' },
+  { date:'2031-01-23', name:'설날' },
+  { date:'2031-01-24', name:'설날 연휴' },
+  { date:'2031-03-01', name:'삼일절' },
+  { date:'2031-03-03', name:'대체공휴일(삼일절)' },
+  { date:'2031-05-01', name:'근로자의 날' },
+  { date:'2031-05-05', name:'어린이날' },
+  { date:'2031-05-28', name:'부처님오신날' },
+  { date:'2031-06-06', name:'현충일' },
+  { date:'2031-07-17', name:'제헌절' },
+  { date:'2031-08-15', name:'광복절' },
+  { date:'2031-09-30', name:'추석 연휴' },
+  { date:'2031-10-01', name:'추석' },
+  { date:'2031-10-02', name:'추석 연휴' },
+  { date:'2031-10-03', name:'개천절' },
+  { date:'2031-10-09', name:'한글날' },
+  { date:'2031-12-25', name:'크리스마스' },
+  { date:'2032-01-01', name:'신정' },
+  { date:'2032-02-10', name:'설날 연휴' },
+  { date:'2032-02-11', name:'설날' },
+  { date:'2032-02-12', name:'설날 연휴' },
+  { date:'2032-03-01', name:'삼일절' },
+  { date:'2032-05-01', name:'근로자의 날' },
+  { date:'2032-05-05', name:'어린이날' },
+  { date:'2032-05-16', name:'부처님오신날' },
+  { date:'2032-05-17', name:'대체공휴일(부처님오신날)' },
+  { date:'2032-06-06', name:'현충일' },
+  { date:'2032-07-17', name:'제헌절' },
+  { date:'2032-08-15', name:'광복절' },
+  { date:'2032-08-16', name:'대체공휴일(광복절)' },
+  { date:'2032-09-18', name:'추석 연휴' },
+  { date:'2032-09-19', name:'추석' },
+  { date:'2032-09-20', name:'추석 연휴' },
+  { date:'2032-09-21', name:'대체공휴일(추석)' },
+  { date:'2032-10-03', name:'개천절' },
+  { date:'2032-10-04', name:'대체공휴일(개천절)' },
+  { date:'2032-10-09', name:'한글날' },
+  { date:'2032-10-11', name:'대체공휴일(한글날)' },
+  { date:'2032-12-25', name:'크리스마스' },
+  { date:'2032-12-27', name:'대체공휴일(크리스마스)' },
+  { date:'2033-01-01', name:'신정' },
+  { date:'2033-01-30', name:'설날 연휴' },
+  { date:'2033-01-31', name:'설날' },
+  { date:'2033-02-01', name:'설날 연휴' },
+  { date:'2033-02-02', name:'대체공휴일(설날)' },
+  { date:'2033-03-01', name:'삼일절' },
+  { date:'2033-05-01', name:'근로자의 날' },
+  { date:'2033-05-05', name:'어린이날' },
+  { date:'2033-06-06', name:'현충일' },
+  { date:'2033-07-17', name:'제헌절' },
+  { date:'2033-08-15', name:'광복절' },
+  { date:'2033-09-07', name:'추석 연휴' },
+  { date:'2033-09-08', name:'추석' },
+  { date:'2033-09-09', name:'추석 연휴' },
+  { date:'2033-10-03', name:'개천절' },
+  { date:'2033-10-09', name:'한글날' },
+  { date:'2033-10-10', name:'대체공휴일(한글날)' },
+  { date:'2033-12-25', name:'크리스마스' },
+  { date:'2033-12-26', name:'대체공휴일(크리스마스)' },
+  { date:'2034-01-01', name:'신정' },
+  { date:'2034-02-18', name:'설날 연휴' },
+  { date:'2034-02-19', name:'설날' },
+  { date:'2034-02-20', name:'설날 연휴' },
+  { date:'2034-02-21', name:'대체공휴일(설날)' },
+  { date:'2034-03-01', name:'삼일절' },
+  { date:'2034-05-01', name:'근로자의 날' },
+  { date:'2034-05-05', name:'어린이날' },
+  { date:'2034-06-06', name:'현충일' },
+  { date:'2034-07-17', name:'제헌절' },
+  { date:'2034-08-15', name:'광복절' },
+  { date:'2034-09-26', name:'추석 연휴' },
+  { date:'2034-09-27', name:'추석' },
+  { date:'2034-09-28', name:'추석 연휴' },
+  { date:'2034-10-03', name:'개천절' },
+  { date:'2034-10-09', name:'한글날' },
+  { date:'2034-12-25', name:'크리스마스' },
+  { date:'2035-01-01', name:'신정' },
+  { date:'2035-02-06', name:'설날 연휴' },
+  { date:'2035-02-07', name:'설날' },
+  { date:'2035-02-08', name:'설날 연휴' },
+  { date:'2035-03-01', name:'삼일절' },
+  { date:'2035-05-01', name:'근로자의 날' },
+  { date:'2035-05-05', name:'어린이날' },
+  { date:'2035-05-07', name:'대체공휴일(어린이날)' },
+  { date:'2035-06-06', name:'현충일' },
+  { date:'2035-07-17', name:'제헌절' },
+  { date:'2035-08-15', name:'광복절' },
+  { date:'2035-09-15', name:'추석 연휴' },
+  { date:'2035-09-16', name:'추석' },
+  { date:'2035-09-17', name:'추석 연휴' },
+  { date:'2035-09-18', name:'대체공휴일(추석)' },
+  { date:'2035-10-03', name:'개천절' },
+  { date:'2035-10-09', name:'한글날' },
+  { date:'2035-12-25', name:'크리스마스' }
+];
+// 진행결과(업무현황 상태값) 배지 색상
+const statusColors = { '완료':'bg-emerald-100 text-emerald-700', '일정연기':'bg-amber-100 text-amber-700', '계획취소':'bg-rose-100 text-rose-700', '미입고':'bg-slate-200 text-slate-600', '일정단축':'bg-blue-100 text-blue-700' };
+function isMasterSchedule(s){ return s && s.source === 'master'; }
+
+// 진행상태(완료/진행/지연) 관련 헬퍼 (V1.11.0)
+function canSetProgressStatus(s){ return canEdit() && !isMasterSchedule(s) && s.eqId!=='holiday' && s.eqId!=='event'; }
+function isHolidayOrEventType(s){ return s && (s.eqId==='holiday' || s.eqId==='event'); }
+function isHolidayType(s){ return s && s.eqId==='holiday'; } // 이 타입만 세로열 전체에 빨간 음영 적용
+// 특정 날짜가 '휴일' 타입에 걸리는지 빠르게 조회하기 위한 날짜 집합 생성
+function buildHolidayDateSet(scheduleList){
+  const set = new Set();
+  scheduleList.filter(isHolidayType).forEach(s=>{
+    const start = new Date(s.startDate);
+    const dur = parseInt(s.duration)||1;
+    for(let i=0;i<dur;i++){
+      const d = new Date(start); d.setDate(d.getDate()+i);
+      set.add(fmtISO(d));
+    }
+  });
+  return set;
+}
+// 앱에서 직접 등록한 일정은 progressStatus, 업무현황 자동연동 일정은 status(진행결과) 필드로 완료 여부를 판단
+function isScheduleCompleted(s){
+  if (!s) return false;
+  if (isMasterSchedule(s)) return s.status === '완료';
+  return s.progressStatus === '완료';
+}
+function getBarColorClass(s, eq){
+  if (isScheduleCompleted(s)) return 'bg-slate-300';
+  return getGroupColor(eq?.group);
+}
+
+let hoveredScheduleId = null;
+let hidePopoverTimer = null;
+
+function showStatusPopover(el, scheduleId){
+  const s = schedules.find(x=>x.id===scheduleId);
+  if (!s || !canSetProgressStatus(s)) return;
+  hoveredScheduleId = scheduleId;
+  cancelHideStatusPopover();
+  const pop = document.getElementById('status-popover');
+  const rect = el.getBoundingClientRect();
+  pop.style.left = `${Math.max(4, rect.left)}px`;
+  pop.style.top = `${Math.max(4, rect.top - 34)}px`;
+  pop.classList.remove('hidden');
+}
+function scheduleHideStatusPopover(){
+  cancelHideStatusPopover();
+  hidePopoverTimer = setTimeout(()=>{
+    document.getElementById('status-popover').classList.add('hidden');
+    hoveredScheduleId = null;
+  }, 250);
+}
+function cancelHideStatusPopover(){
+  if (hidePopoverTimer){ clearTimeout(hidePopoverTimer); hidePopoverTimer=null; }
+}
+
+async function setBarProgressStatus(newStatus){
+  if (!hoveredScheduleId) return;
+  const id = hoveredScheduleId;
+  document.getElementById('status-popover').classList.add('hidden');
+  hoveredScheduleId = null;
+
+  const idx = schedules.findIndex(s=>s.id===id);
+  if (idx===-1) return;
+  const prevStatus = schedules[idx].progressStatus;
+  schedules[idx] = { ...schedules[idx], progressStatus: newStatus }; // 화면 즉시 반영
+  renderCurrentView();
+  showToast(`상태가 '${newStatus}'(으)로 변경되었습니다.`);
+
+  try {
+    const res = await gasPost('updateProgressStatus', { id, progressStatus: newStatus });
+    if (res.status!=='success') throw new Error(res.message||'저장 실패');
+  } catch(e){
+    schedules[idx] = { ...schedules[idx], progressStatus: prevStatus }; // 실패 시 되돌림
+    renderCurrentView();
+    showToast('상태 변경 저장에 실패했습니다. 다시 시도해주세요.');
+  }
+}
+
+
+function getGroupColor(g){ return groupColors[g] || 'bg-slate-500'; }
+function getEq(id){ return equipments.find(e=>e.id===id); }
+function fmtISO(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function todayStr(){ return fmtISO(new Date()); }
+// 서버에서 온 날짜 값이 "2026-08-15T00:00:00.000Z" 같은 타임스탬프 형태여도 앞부분 날짜만 취해 통일 (V1.9.0)
+function normalizeDateStr(v){
+  if (!v) return v;
+  const m = String(v).match(/^(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : v;
+}
+function getMonday(d){ d=new Date(d); const day=d.getDay(); const diff=d.getDate()-day+(day===0?-6:1); return new Date(d.setDate(diff)); }
+function isDateInRange(target, start, duration){
+  const s = new Date(start); const e = new Date(start); e.setDate(e.getDate()+(parseInt(duration||1)-1));
+  const t = new Date(target);
+  return t>=s && t<=e;
+}
+function isAdmin(){ return currentUser && currentUser.role==='admin'; }
+function canEdit(){ return currentUser && (currentUser.role==='admin' || currentUser.role==='editor'); }
+function isViewer(){ return currentUser && currentUser.role==='viewer'; }
+
+/* ---------------------- 초기 부트스트랩 ---------------------- */
+window.addEventListener('DOMContentLoaded', () => {
+  GAS_URL = localStorage.getItem(LS_GAS_URL) || '';
+  populateFilterSelects();
+  populateEquipmentSelect();
+
+  if (!GAS_URL) { showScreen('screen-setup'); return; }
+
+  const savedSession = localStorage.getItem(LS_SESSION);
+  if (savedSession) {
+    try { currentUser = JSON.parse(savedSession); } catch(e){ currentUser = null; }
+  }
+  if (currentUser) enterApp();
+  else showScreen('screen-auth');
+});
+
+function showScreen(id){
+  ['screen-setup','screen-auth','screen-app'].forEach(s=>{
+    document.getElementById(s).classList.toggle('hidden', s!==id);
+  });
+}
+
+/* ---------------------- 서버 통신 유틸 ---------------------- */
+function setLoading(v){ document.getElementById('loading-overlay').style.display = v ? 'flex' : 'none'; }
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.innerText=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+// 요청이 15초 안에 끝나지 않으면 중단하고, 실패 시 짧은 대기 후 최대 2회까지 자동 재시도
+async function fetchWithRetry(url, options, retries=2, backoffMs=800){
+  for (let attempt=0; attempt<=retries; attempt++){
+    const controller = new AbortController();
+    const timeoutId = setTimeout(()=>controller.abort(), 15000);
+    try {
+      const res = await fetch(url, { ...(options||{}), signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (!res.ok && attempt < retries){
+        await new Promise(r=>setTimeout(r, backoffMs*(attempt+1)));
+        continue;
+      }
+      return res;
+    } catch(e){
+      clearTimeout(timeoutId);
+      if (attempt === retries) throw e;
+      await new Promise(r=>setTimeout(r, backoffMs*(attempt+1)));
+    }
+  }
+}
+
+async function gasGet(action, extraParams){
+  // 캐시로 인해 오래된 데이터가 재사용되는 것을 막기 위해 매번 다른 URL + no-store 사용
+  const extra = extraParams ? '&' + new URLSearchParams(extraParams).toString() : '';
+  const res = await fetchWithRetry(`${GAS_URL}?action=${action}${extra}&_ts=${Date.now()}`, { cache: 'no-store' });
+  return res.json();
+}
+async function gasPost(action, body){
+  const res = await fetchWithRetry(`${GAS_URL}?action=${action}&_ts=${Date.now()}`, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(body||{}),
+    cache: 'no-store'
+  });
+  return res.json();
+}
+
+/* ---------------------- 화면 0: 서버 연결 설정 ---------------------- */
+async function testAndSaveGasUrl(){
+  const url = document.getElementById('setup-url-input').value.trim();
+  const errEl = document.getElementById('setup-error');
+  errEl.classList.add('hidden');
+  if (!url) { errEl.innerText='URL을 입력해주세요.'; errEl.classList.remove('hidden'); return; }
+  setLoading(true);
+  try {
+    const res = await fetch(`${url}?action=read`);
+    const data = await res.json();
+    if (data.status !== 'success') throw new Error(data.message || '연결 실패');
+    GAS_URL = url;
+    localStorage.setItem(LS_GAS_URL, url);
+    showToast('✅ 서버 연결 성공!');
+    showScreen('screen-auth');
+  } catch(e){
+    errEl.innerText = '연결에 실패했습니다. URL과 배포 상태(액세스: 전체)를 확인해주세요.';
+    errEl.classList.remove('hidden');
+  } finally { setLoading(false); }
+}
+function openSetupFromAuth(){
+  document.getElementById('setup-url-input').value = GAS_URL;
+  showScreen('screen-setup');
+}
+
+/* ---------------------- 화면 1: 로그인 / 회원가입 ---------------------- */
+function switchAuthTab(tab){
+  document.getElementById('auth-tab-login').classList.toggle('active', tab==='login');
+  document.getElementById('auth-tab-register').classList.toggle('active', tab==='register');
+  document.getElementById('form-login').classList.toggle('hidden', tab!=='login');
+  document.getElementById('form-register').classList.toggle('hidden', tab!=='register');
+  document.getElementById('auth-error').classList.add('hidden');
+  document.getElementById('auth-success').classList.add('hidden');
+}
+
+async function handleLogin(e){
+  e.preventDefault();
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('auth-error');
+  errEl.classList.add('hidden');
+  setLoading(true);
+  try {
+    const res = await gasPost('login', { username, password });
+    if (res.status === 'success') {
+      currentUser = res.user;
+      localStorage.setItem(LS_SESSION, JSON.stringify(currentUser));
+      enterApp();
+    } else {
+      errEl.innerText = res.message || '로그인에 실패했습니다.';
+      errEl.classList.remove('hidden');
+    }
+  } catch(err){
+    errEl.innerText = '서버와 통신할 수 없습니다.';
+    errEl.classList.remove('hidden');
+  } finally { setLoading(false); }
+}
+
+async function handleRegister(e){
+  e.preventDefault();
+  const name = document.getElementById('reg-name').value.trim();
+  const username = document.getElementById('reg-username').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const password2 = document.getElementById('reg-password2').value;
+  const errEl = document.getElementById('auth-error');
+  const okEl = document.getElementById('auth-success');
+  errEl.classList.add('hidden'); okEl.classList.add('hidden');
+
+  if (password !== password2) { errEl.innerText='비밀번호가 일치하지 않습니다.'; errEl.classList.remove('hidden'); return; }
+
+  setLoading(true);
+  try {
+    const res = await gasPost('register', { username, password, name });
+    if (res.status === 'success') {
+      okEl.innerText = res.user.role==='admin'
+        ? '🎉 관리자 계정으로 가입되었습니다! 로그인해주세요.'
+        : '가입이 완료되었습니다. 로그인해주세요. (뷰어 권한으로 시작)';
+      okEl.classList.remove('hidden');
+      document.getElementById('form-register').reset();
+      setTimeout(()=>switchAuthTab('login'), 1200);
+    } else {
+      errEl.innerText = res.message || '가입에 실패했습니다.';
+      errEl.classList.remove('hidden');
+    }
+  } catch(err){
+    errEl.innerText = '서버와 통신할 수 없습니다.';
+    errEl.classList.remove('hidden');
+  } finally { setLoading(false); }
+}
+
+function logout(){
+  currentUser = null;
+  localStorage.removeItem(LS_SESSION);
+  showScreen('screen-auth');
+  switchAuthTab('login');
+}
+
+/* ---------------------- 화면 2: 메인 앱 진입 ---------------------- */
+async function enterApp(){
+  showScreen('screen-app');
+  renderUserBadge();
+  await loadAllData();
+  switchView('calendar');
+}
+
+function renderUserBadge(){
+  document.getElementById('user-name-label').innerText = `${currentUser.name}님`;
+  const badge = document.getElementById('user-role-badge');
+  const roleLabel = { admin:'👑 관리자', editor:'✏️ 편집자', viewer:'👁️ 뷰어' }[currentUser.role] || currentUser.role;
+  badge.innerText = roleLabel;
+  badge.className = `px-3 py-1.5 rounded-full text-xs font-black role-badge-${currentUser.role}`;
+
+  document.getElementById('btn-admin-panel').classList.toggle('hidden', !isAdmin());
+  document.getElementById('btn-request-permission').classList.toggle('hidden', !isViewer());
+  document.getElementById('btn-holiday-calendar').classList.toggle('hidden', !canEdit());
+  document.getElementById('btn-holiday-timeline').classList.toggle('hidden', !canEdit());
+}
+
+/* ---------------------- 데이터 로드 ---------------------- */
+async function loadAllData(){
+  setLoading(true);
+  try {
+    const res = await gasGet('read');
+    if (res.status === 'success') {
+      users = res.data.users || [];
+      schedules = (res.data.schedules || []).map(s => ({...s, duration: parseInt(s.duration)||1, startDate: normalizeDateStr(s.startDate)}));
+      permRequests = res.data.requests || [];
+
+      // 내 권한이 서버에서 바뀌었을 수 있으므로(승인 등) 동기화
+      const me = users.find(u => u.username === currentUser.username);
+      if (me && me.role !== currentUser.role) {
+        currentUser.role = me.role;
+        localStorage.setItem(LS_SESSION, JSON.stringify(currentUser));
+        renderUserBadge();
+        showToast(`권한이 [${me.role}]로 갱신되었습니다.`);
+      }
+      renderCurrentView();
+    } else {
+      showToast('데이터 로드 실패: ' + (res.message||''));
+    }
+  } catch(err){
+    showToast('서버와 통신할 수 없습니다.');
+  } finally { setLoading(false); }
+}
+
+/* ---------------------- 필터 ---------------------- */
+function populateFilterSelects(){
+  const groupSel = document.getElementById('filter-group');
+  const groups = [...new Set(equipments.map(e=>e.group))];
+  groupSel.innerHTML = `<option value="all">전체 그룹</option>` + groups.map(g=>`<option value="${g}">${g}</option>`).join('');
+
+  const eqSel = document.getElementById('filter-eq');
+  eqSel.innerHTML = `<option value="all">전체 장비</option>` + equipments.map(e=>`<option value="${e.id}">${e.icon} ${e.name}</option>`).join('');
+}
+function populateEquipmentSelect(){
+  const sel = document.getElementById('sch-eqid');
+  sel.innerHTML = equipments.map(e=>`<option value="${e.id}">${e.icon} ${e.name} (${e.group})</option>`).join('');
+}
+function onFilterChange(){
+  filters.group = document.getElementById('filter-group').value;
+  filters.eq = document.getElementById('filter-eq').value;
+  filters.search = document.getElementById('filter-search').value.toLowerCase().trim();
+  renderCurrentView();
+}
+function resetFilters(){
+  document.getElementById('filter-group').value='all';
+  document.getElementById('filter-eq').value='all';
+  document.getElementById('filter-search').value='';
+  filters = { group:'all', eq:'all', search:'' };
+  renderCurrentView();
+}
+function getFilteredSchedules(){
+  return schedules.filter(s => {
+    if (s.status === 'deleted') return false;
+    const eq = getEq(s.eqId);
+    if (filters.group !== 'all' && (!eq || eq.group !== filters.group)) return false;
+    if (filters.eq !== 'all' && s.eqId !== filters.eq) return false;
+    if (filters.search) {
+      const hay = `${s.title} ${s.owner||''} ${s.desc||''}`.toLowerCase();
+      if (!hay.includes(filters.search)) return false;
+    }
+    return true;
+  });
+}
+
+// 휴일/이벤트는 캘린더 전체 맥락(주말과 비슷한 성격)이라, 장비/그룹 필터와 무관하게 항상 표시 (검색어 필터만 적용)
+function getHolidayEventSchedules(){
+  return schedules.filter(s => {
+    if (s.status === 'deleted') return false;
+    if (!isHolidayOrEventType(s)) return false;
+    if (filters.search) {
+      const hay = `${s.title} ${s.desc||''}`.toLowerCase();
+      if (!hay.includes(filters.search)) return false;
+    }
+    return true;
+  });
+}
+
+/* ---------------------- 뷰 전환 ---------------------- */
+function switchView(view){
+  currentView = view;
+  ['calendar','timeline','table'].forEach(v=>{
+    document.getElementById(`view-${v}`).classList.toggle('hidden', v!==view);
+    document.getElementById(`tab-view-${v}`).classList.toggle('active', v===view);
+  });
+  renderCurrentView();
+}
+function renderCurrentView(){
+  if (currentView==='calendar') renderCalendar();
+  else if (currentView==='timeline') renderTimeline();
+  else renderTable();
+}
+
+/* ============================================================
+   캘린더 뷰
+============================================================ */
+function moveCalendarMonth(n){ currentMonthDate.setMonth(currentMonthDate.getMonth()+n); renderCurrentView(); }
+
+function renderCalendar(){
+  const year = currentMonthDate.getFullYear(), month = currentMonthDate.getMonth();
+  document.getElementById('cal-month-label').innerText = `${year}년 ${month+1}월`;
+  const firstDay = new Date(year,month,1).getDay();
+  const lastDate = new Date(year,month+1,0).getDate();
+  const body = document.getElementById('calendar-grid-body');
+  body.innerHTML='';
+  const filtered = getFilteredSchedules();
+
+  // 이번 달 전체를 주(週) 단위 배열로 구성 (앞/뒤 공백 포함, 7의 배수로 패딩)
+  const cells = [];
+  for(let i=0;i<firstDay;i++) cells.push(null);
+  for(let d=1; d<=lastDate; d++){
+    cells.push({ date: new Date(year,month,d), dateStr: `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}` });
+  }
+  while(cells.length % 7 !== 0) cells.push(null);
+  const weeks = [];
+  for(let i=0;i<cells.length;i+=7) weeks.push(cells.slice(i,i+7));
+
+  weeks.forEach(week=>{
+    try {
+    const realCols = [];
+    week.forEach((c,idx)=>{ if(c) realCols.push(idx); });
+    if (realCols.length===0) return;
+    const weekFirstDate = week[realCols[0]].date;
+    const weekLastDate = week[realCols[realCols.length-1]].date;
+
+    // 이 주에 걸치는 2일 이상 일정(휴일/이벤트 제외) → 연결된 막대로 표시하기 위해 레인 배정
+    const multiDay = filtered.filter(s=>{
+      if (isHolidayOrEventType(s)) return false; // 휴일/이벤트는 날짜별로 개별 표시
+      const dur = parseInt(s.duration)||1;
+      if (dur<2) return false;
+      const sStart = new Date(s.startDate);
+      const sEnd = new Date(s.startDate); sEnd.setDate(sEnd.getDate()+dur-1);
+      return !(sEnd < weekFirstDate || sStart > weekLastDate);
+    }).sort((a,b)=>a.startDate.localeCompare(b.startDate));
+
+    const MAX_LANES = 3; // 한 주에 표시할 연결막대 최대 레인 수 (그 이상은 '+N건 더'로 축약)
+    let laneEnds = [];
+    let maxLane = 0;
+    const bars = [];
+    const overflowByCol = {}; // 레인 초과로 표시 못한 항목 수 (요일 컬럼별 집계, "+N건 더" 표시용)
+    multiDay.forEach(s=>{
+      const dur = parseInt(s.duration)||1;
+      const sStart = new Date(s.startDate);
+      const sEnd = new Date(s.startDate); sEnd.setDate(sEnd.getDate()+dur-1);
+      const dispStart = sStart < weekFirstDate ? weekFirstDate : sStart;
+      const dispEnd = sEnd > weekLastDate ? weekLastDate : sEnd;
+      let lane=0;
+      while(laneEnds[lane]!==undefined && laneEnds[lane] >= dispStart) lane++;
+      if (lane >= MAX_LANES){
+        // 레인이 꽉 찬 경우 → 해당 기간의 각 날짜에 '+N건 더' 카운트만 누적 (막대는 그리지 않음)
+        for(let dt=new Date(dispStart); dt<=dispEnd; dt.setDate(dt.getDate()+1)){
+          overflowByCol[dt.getDay()] = (overflowByCol[dt.getDay()]||0) + 1;
+        }
+        return;
+      }
+      laneEnds[lane]=dispEnd;
+      maxLane = Math.max(maxLane, lane);
+      bars.push({ s, startCol: dispStart.getDay(), endCol: dispEnd.getDay(), lane });
+    });
+    const barsAreaHeight = (Math.min(maxLane, MAX_LANES-1)+1) * 20 + (Object.keys(overflowByCol).length>0 ? 16 : 0); // px
+
+    const weekWrap = document.createElement('div');
+    weekWrap.className='relative grid grid-cols-7';
+
+    week.forEach((c, colIdx)=>{
+      const box=document.createElement('div');
+      if (!c){ box.className='calendar-day-box empty'; weekWrap.appendChild(box); return; }
+      const dateStr = c.dateStr;
+      const dow = colIdx;
+      const isToday = dateStr === todayStr();
+      const dayHolidays = getHolidayEventSchedules().filter(s => isDateInRange(dateStr, s.startDate, s.duration));
+      const hasHolidayShading = dayHolidays.some(isHolidayType); // '휴일' 타입만 전체 음영 적용 ('이벤트'는 배지만)
+      let bgClass = '';
+      if (hasHolidayShading) bgClass = 'holiday-col-shade';
+      else if (dow===0) bgClass = 'weekend-sun-shade';
+      else if (dow===6) bgClass = 'weekend-sat-shade';
+      box.className = `calendar-day-box ${bgClass}`;
+      if (isToday) box.classList.add('is-today');
+      const numClass = isToday ? 'bg-indigo-600 text-white rounded-full w-6 h-6 flex items-center justify-center' : (dow===0||hasHolidayShading?'text-rose-500':dow===6?'text-blue-500':'text-slate-700');
+      const badgeIcon = dayHolidays[0] && isHolidayType(dayHolidays[0]) ? '🎌' : '📌';
+      const holidayBadge = dayHolidays.length>0
+        ? `<span class="text-[9px] font-bold text-rose-600 bg-white/80 rounded px-1.5 py-0.5 truncate max-w-[68%] cursor-pointer" title="${dayHolidays.map(h=>h.title).join(', ').replace(/"/g,'&quot;')}" onclick="event.stopPropagation();openDateHolidays('${dateStr}')">${badgeIcon} ${dayHolidays[0].title}${dayHolidays.length>1?` 외${dayHolidays.length-1}`:''}</span>`
+        : '';
+      box.innerHTML = `<div class="flex items-center justify-between gap-1">
+        <div class="text-xs font-black ${numClass}" style="width:fit-content">${c.date.getDate()}${isToday?' <span class=\'text-[9px] font-bold text-indigo-500\'>오늘</span>':''}</div>
+        ${holidayBadge}
+      </div>`;
+
+      if (barsAreaHeight>0){
+        const spacer=document.createElement('div');
+        spacer.style.height = `${barsAreaHeight+4}px`;
+        spacer.style.flexShrink='0';
+        box.appendChild(spacer);
+      }
+      if (overflowByCol[colIdx]){
+        const ov=document.createElement('div');
+        ov.style.position='absolute';
+        ov.style.top = `${26 + MAX_LANES*20}px`;
+        ov.className='text-[9px] font-bold text-slate-400 cursor-pointer';
+        ov.innerText = `+${overflowByCol[colIdx]}건 더`;
+        ov.onclick=(ev)=>{ ev.stopPropagation(); openDayListModal(dateStr, filtered.filter(s=>isDateInRange(dateStr, s.startDate, s.duration))); };
+        box.style.position='relative';
+        box.appendChild(ov);
+      }
+
+      // 단일일(1일) 일정만 셀 안에 개별 표시 (휴일/이벤트 및 2일 이상 장비일정은 별도 처리)
+      const dayItems = filtered.filter(s => !isHolidayOrEventType(s) && (parseInt(s.duration)||1)===1 && isDateInRange(dateStr, s.startDate, s.duration));
+      const allDayItems = filtered.filter(s => isDateInRange(dateStr, s.startDate, s.duration)); // 모달에는 연결막대 항목도 포함
+      dayItems.slice(0,3).forEach(s=>{
+        const eq = getEq(s.eqId);
+        const chip=document.createElement('div');
+        chip.className = `calendar-item-chip ${getBarColorClass(s, eq)}`;
+        chip.innerText = `${s.progressStatus==='지연'?'⚠️ ':''}${eq?eq.icon:''} ${isMasterSchedule(s)?'🔒 ':''}${isScheduleCompleted(s)?'✅ ':''}${s.title}`;
+        chip.onclick=(ev)=>{ ev.stopPropagation(); openScheduleModal(canEdit()?'edit':'view', s); };
+        if (canSetProgressStatus(s)){
+          chip.addEventListener('mouseenter', ()=>showStatusPopover(chip, s.id));
+          chip.addEventListener('mouseleave', scheduleHideStatusPopover);
+        }
+        box.appendChild(chip);
+      });
+      if (allDayItems.length>3){
+        const more=document.createElement('div');
+        more.className='text-[10px] text-indigo-600 font-black cursor-pointer';
+        more.innerText = `전체 ${allDayItems.length}건 보기`;
+        more.onclick=(ev)=>{ ev.stopPropagation(); openDayListModal(dateStr, allDayItems); };
+        box.appendChild(more);
+      }
+      if (canEdit()){
+        box.style.cursor='pointer';
+        box.onclick=()=> openScheduleModal('new', { startDate: dateStr });
+      }
+      weekWrap.appendChild(box);
+    });
+
+    // 2일 이상 일정 → 요일 칸을 가로질러 하나로 연결된 막대
+    bars.forEach(({s, startCol, endCol, lane})=>{
+      const eq = getEq(s.eqId);
+      const locked = isMasterSchedule(s);
+      const bar=document.createElement('div');
+      bar.className=`absolute rounded text-white text-[10px] font-bold px-2 flex items-center shadow cursor-pointer overflow-hidden whitespace-nowrap hover:scale-[1.01] transition-transform ${getBarColorClass(s, eq)}`;
+      bar.style.left = `calc(${startCol} / 7 * 100% + 3px)`;
+      bar.style.width = `calc(${endCol-startCol+1} / 7 * 100% - 6px)`;
+      bar.style.top = `${26 + lane*20}px`;
+      bar.style.height='18px';
+      bar.style.zIndex = '2';
+      bar.style.textOverflow='ellipsis';
+      bar.title = `${locked?'[업무현황 자동연동] ':''}${s.title} (${s.startDate}, ${s.duration}일)${s.progressStatus?' · '+s.progressStatus:''}`;
+      bar.innerText = `${locked?'🔒 ':''}${isScheduleCompleted(s)?'✅ ':''}${eq?eq.icon:''} ${s.title}`;
+      bar.onclick=(ev)=>{ ev.stopPropagation(); openScheduleModal(canEdit()?'edit':'view', s); };
+      if (canSetProgressStatus(s)){
+        bar.addEventListener('mouseenter', ()=>showStatusPopover(bar, s.id));
+        bar.addEventListener('mouseleave', scheduleHideStatusPopover);
+      }
+      weekWrap.appendChild(bar);
+      if (s.progressStatus === '지연'){
+        const delayBadge = document.createElement('span');
+        delayBadge.className = 'absolute bg-rose-500 text-white text-[8px] font-black px-1 rounded-full shadow pointer-events-none';
+        delayBadge.style.top = `${26 + lane*20 - 6}px`;
+        delayBadge.style.left = `calc(${endCol} / 7 * 100% - 14px)`;
+        delayBadge.innerText = '⚠️';
+        weekWrap.appendChild(delayBadge);
+      }
+    });
+
+    body.appendChild(weekWrap);
+    } catch(err){
+      console.error('캘린더 주간 렌더링 오류:', err);
+    }
+  });
+}
+
+function openDateHolidays(dateStr){
+  const items = getHolidayEventSchedules().filter(s => isDateInRange(dateStr, s.startDate, s.duration));
+  if (items.length===0) return;
+  if (items.length===1) openScheduleModal(canEdit()?'edit':'view', items[0]);
+  else openDayListModal(dateStr, items);
+}
+
+function openDayListModal(dateStr, items){
+  document.getElementById('daylist-title').innerText = `📅 ${dateStr} 전체 일정`;
+  document.getElementById('daylist-count').innerText = `총 ${items.length}건`;
+  const wrap = document.getElementById('daylist-items');
+
+  // 장비별로 그룹핑 (휴일/이벤트는 마지막 그룹으로)
+  const groups = {};
+  const order = [];
+  items.forEach(s=>{
+    const key = s.eqId || '_none';
+    if (!groups[key]) { groups[key] = []; order.push(key); }
+    groups[key].push(s);
+  });
+  order.sort((a,b)=>{
+    if (isHolidayOrEventType({eqId:a})) return 1;
+    if (isHolidayOrEventType({eqId:b})) return -1;
+    return a.localeCompare(b);
+  });
+
+  wrap.innerHTML = order.map(eqId=>{
+    const eq = getEq(eqId);
+    const groupItems = groups[eqId];
+    const itemsHtml = groupItems.map(s=>{
+      const locked = isMasterSchedule(s);
+      const completed = isScheduleCompleted(s);
+      const mode = (locked || !canEdit()) ? 'view' : 'edit';
+      const dataAttr = JSON.stringify(s).replace(/"/g,'&quot;');
+      return `
+        <div class="p-2.5 ${completed?'bg-slate-100':'bg-slate-50'} hover:bg-slate-100 rounded-lg flex items-start gap-2 cursor-pointer" onclick="closeModal('modal-daylist');openScheduleModal('${mode}', ${dataAttr})">
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-bold ${completed?'text-slate-400':'text-slate-800'} truncate">${locked?'🔒 ':''}${completed?'✅ ':''}${s.title}</p>
+            <p class="text-xs text-slate-500">${s.duration}일${s.owner?` · ${s.owner}`:''}${s.status?` · <span class="font-bold">${s.status}</span>`:''}${s.progressStatus?` · <span class="font-bold">${s.progressStatus}</span>`:''}</p>
+          </div>
+        </div>`;
+    }).join('');
+    return `
+      <div class="mb-3">
+        <div class="flex items-center gap-2 mb-1.5">
+          <div class="w-6 h-6 rounded-md ${getGroupColor(eq?.group)} flex items-center justify-center text-white text-xs shrink-0">${eq?eq.icon:'❔'}</div>
+          <p class="text-xs font-black text-slate-500">${eq?eq.name:'미지정 장비'} <span class="text-slate-400 font-normal">(${groupItems.length}건)</span></p>
+        </div>
+        <div class="space-y-1.5">${itemsHtml}</div>
+      </div>`;
+  }).join('');
+  openModal('modal-daylist');
+}
+
+/* ============================================================
+   타임라인 뷰
+============================================================ */
+function moveTimelineMonth(n){
+  currentMonthDate.setMonth(currentMonthDate.getMonth()+n);
+  renderCurrentView();
+}
+
+let timelineScrollSyncAttached = false;
+function setupTimelineScrollSync(){
+  const top = document.getElementById('timeline-topscroll');
+  const header = document.getElementById('timeline-header-wrap');
+  const main = document.getElementById('timeline-scroll-wrap');
+  if (!top || !header || !main || timelineScrollSyncAttached) return;
+  timelineScrollSyncAttached = true;
+  let syncing = false;
+  function sync(source, targets){
+    if (syncing) return;
+    syncing = true;
+    targets.forEach(t => { if (t.scrollLeft !== source.scrollLeft) t.scrollLeft = source.scrollLeft; });
+    syncing = false;
+  }
+  top.addEventListener('scroll', ()=> sync(top, [header, main]));
+  main.addEventListener('scroll', ()=> sync(main, [header, top]));
+}
+
+function goToTodayInTimeline(){
+  currentMonthDate = new Date();
+  if (currentView !== 'timeline') switchView('timeline');
+  else renderCurrentView();
+  // 렌더링이 끝난 다음 프레임에 오늘 컬럼이 화면 중앙에 오도록 스크롤
+  requestAnimationFrame(()=>{
+    const wrap = document.getElementById('timeline-scroll-wrap');
+    if (!wrap) return;
+    const dayIndex = new Date().getDate()-1; // 0-based
+    const todayCenter = dayIndex*TIMELINE_CELL_W + TIMELINE_CELL_W/2 + 160; // 160px = 좌측 장비명 칼럼(w-40) 보정
+    wrap.scrollLeft = todayCenter - wrap.clientWidth/2;
+  });
+}
+
+// 막대 안에 표시할 라벨: 한글이 섞인 긴 제목은 막대를 넘어가 잘 보이지 않으므로
+// 영문/숫자/기호(모델명 등)만 추출해 짧게 표시합니다. 전체 제목은 툴팁/클릭 시 모달에서 확인.
+function extractEnglishLabel(title){
+  if (!title) return '';
+  const matches = title.match(/[A-Za-z0-9\[\]().\-_/#% ]+/g);
+  const joined = matches ? matches.join('').replace(/\s+/g,' ').trim() : '';
+  return joined || title; // 영문이 전혀 없으면 원제목 그대로 표시(빈 막대 방지)
+}
+
+// 타임라인 막대 드래그(이동) / 우측 핸들 리사이즈(기간 변경) 처리
+function attachBarDragHandlers(bar, schedule, CELL_W, onDragOccurred){
+  if (!canEdit() || isMasterSchedule(schedule)) return;
+
+  let dragMode = null;
+  let startX = 0, startLeft = 0, startWidth = 0, moved = false;
+
+  function onMouseMove(ev){
+    const deltaX = ev.clientX - startX;
+    if (Math.abs(deltaX) > 4) moved = true;
+    if (dragMode==='move'){
+      const dayDelta = Math.round(deltaX / CELL_W);
+      bar.style.left = `${startLeft + dayDelta*CELL_W}px`;
+    } else if (dragMode==='resize'){
+      const dayDelta = Math.round(deltaX / CELL_W);
+      bar.style.width = `${Math.max(CELL_W-6, startWidth + dayDelta*CELL_W)}px`;
+    }
+  }
+
+  function onMouseUp(ev){
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+    const wasMoved = moved;
+    const mode = dragMode;
+    dragMode = null; moved = false;
+    if (!wasMoved) return; // 실제 이동이 없었으면 일반 클릭으로 처리
+
+    onDragOccurred(); // 뒤이어 발생할 click 이벤트가 모달을 열지 않도록 표시
+    const deltaX = ev.clientX - startX;
+    const dayDelta = Math.round(deltaX / CELL_W);
+    if (dayDelta === 0){ renderCurrentView(); return; }
+
+    const oldDuration = parseInt(schedule.duration)||1;
+    let newStartDate = schedule.startDate, newDuration = oldDuration;
+    if (mode==='move'){
+      const d = new Date(schedule.startDate); d.setDate(d.getDate()+dayDelta);
+      newStartDate = fmtISO(d);
+    } else if (mode==='resize'){
+      newDuration = Math.max(1, oldDuration + dayDelta);
+    }
+    openChangeConfirm(schedule, { startDate: newStartDate, duration: newDuration });
+  }
+
+  bar.addEventListener('mousedown', (ev)=>{
+    ev.preventDefault(); ev.stopPropagation();
+    dragMode='move'; startX=ev.clientX; startLeft=parseFloat(bar.style.left); moved=false;
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  });
+
+  const handle = document.createElement('div');
+  handle.className = 'absolute top-0 bottom-0 right-0';
+  handle.style.width = '8px';
+  handle.style.cursor = 'ew-resize';
+  handle.title = '드래그해서 기간 변경';
+  handle.addEventListener('mousedown', (ev)=>{
+    ev.preventDefault(); ev.stopPropagation();
+    dragMode='resize'; startX=ev.clientX; startWidth=parseFloat(bar.style.width); moved=false;
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  });
+  bar.appendChild(handle);
+}
+
+let pendingScheduleChange = null;
+function openChangeConfirm(schedule, newValues){
+  pendingScheduleChange = { schedule, newValues };
+  const eq = getEq(schedule.eqId);
+  const oldEnd = new Date(schedule.startDate); oldEnd.setDate(oldEnd.getDate()+(parseInt(schedule.duration)||1)-1);
+  const newEnd = new Date(newValues.startDate); newEnd.setDate(newEnd.getDate()+(parseInt(newValues.duration)||1)-1);
+  document.getElementById('change-confirm-title').innerText = `${eq?eq.icon:''} ${schedule.title}`;
+  document.getElementById('change-confirm-old').innerText = `${schedule.startDate} ~ ${fmtISO(oldEnd)} (${schedule.duration}일)`;
+  document.getElementById('change-confirm-new').innerText = `${newValues.startDate} ~ ${fmtISO(newEnd)} (${newValues.duration}일)`;
+  document.getElementById('change-confirm-reason').value = '';
+  openModal('modal-change-confirm');
+}
+
+function cancelChangeConfirm(){
+  pendingScheduleChange = null;
+  closeModal('modal-change-confirm');
+  renderCurrentView(); // 드래그로 임시 이동된 화면을 원래 상태로 되돌림
+}
+
+async function confirmChangeConfirm(){
+  if (!pendingScheduleChange) return;
+  const { schedule, newValues } = pendingScheduleChange;
+  const reason = document.getElementById('change-confirm-reason').value.trim();
+  const updated = { ...schedule, startDate: newValues.startDate, duration: newValues.duration };
+  closeModal('modal-change-confirm');
+  pendingScheduleChange = null;
+
+  const idx = schedules.findIndex(s=>s.id===schedule.id);
+  if (idx>-1) schedules[idx] = updated;
+  renderCurrentView(); // 화면 즉시 반영
+  showToast('일정이 변경되었습니다.');
+
+  try {
+    const res = await gasPost('saveSchedule', { schedule: updated });
+    if (res.status!=='success') throw new Error(res.message||'저장 실패');
+    const diff = summarizeChanges(schedule, updated);
+    if (diff) logScheduleHistory(updated.id, updated.title, diff.oldSummary, diff.newSummary, reason); // 이력 기록은 완료를 기다리지 않음
+  } catch(e){
+    if (idx>-1) schedules[idx] = schedule; // 실패 시 되돌림
+    renderCurrentView();
+    showToast('변경 저장에 실패했습니다. 다시 시도해주세요.');
+  }
+}
+
+const TIMELINE_CELL_W = 180; // 타임라인 날짜 칸 너비 (전역화: 오늘 버튼 스크롤 계산에도 사용)
+
+function renderTimeline(){
+  const container = document.getElementById('timeline-body');
+  container.innerHTML='';
+  const headerContainer = document.getElementById('timeline-header-inner');
+  headerContainer.innerHTML='';
+  const CELL_W = TIMELINE_CELL_W;
+  const year = currentMonthDate.getFullYear(), month = currentMonthDate.getMonth();
+  const lastDate = new Date(year, month+1, 0).getDate();
+  const days = [];
+  for(let d=1; d<=lastDate; d++){ days.push(new Date(year, month, d)); }
+  document.getElementById('timeline-range-label').innerText = `${year}년 ${month+1}월 (${lastDate}일)`;
+  const filteredSchedules = getFilteredSchedules();
+  const holidayEventSchedules = getHolidayEventSchedules(); // 필터와 무관하게 항상 표시되는 휴일/이벤트 목록
+  const holidayDateSet = buildHolidayDateSet(holidayEventSchedules); // '휴일' 타입 전체열 음영 판정용
+
+  const header = document.createElement('div');
+  header.className='flex bg-white border-b-2 border-slate-200';
+  header.innerHTML = `<div class="w-40 shrink-0 p-2 text-[10px] font-black text-slate-400 uppercase flex items-center sticky left-0 bg-white z-20">장비</div>` +
+    days.map(d=>{
+      const dow=d.getDay();
+      const dStr = fmtISO(d);
+      const isToday = dStr===todayStr();
+      const isHolidayCol = holidayDateSet.has(dStr);
+      const cls = dow===0||isHolidayCol?'text-rose-600':dow===6?'text-blue-600':'text-slate-500';
+      const dayHolidays = holidayEventSchedules.filter(s => isDateInRange(dStr, s.startDate, s.duration));
+      const badgeIcon = dayHolidays[0] && isHolidayType(dayHolidays[0]) ? '🎌' : '📌';
+      const holidayBadge = dayHolidays.length>0
+        ? `<span class="text-[9px] font-bold text-rose-600 bg-white/80 rounded px-1 py-0.5 truncate max-w-[70px] cursor-pointer inline-block" title="${dayHolidays.map(h=>h.title).join(', ').replace(/"/g,'&quot;')}" onclick="event.stopPropagation();openDateHolidays('${dStr}')">${badgeIcon} ${dayHolidays[0].title}${dayHolidays.length>1?` 외${dayHolidays.length-1}`:''}</span>`
+        : '';
+      const cellStyle = `width:${CELL_W}px;${isToday?'box-shadow:inset 0 3px 0 0 #6366f1;':''}`;
+      const bgCls = isHolidayCol?'bg-rose-200':(isToday?'bg-indigo-100':(dow===0?'bg-rose-100':dow===6?'bg-blue-100':''));
+      return `<div style="${cellStyle}" class="shrink-0 p-2 text-[11px] font-bold ${cls} border-l border-slate-100 ${bgCls}">
+        <div class="flex items-center justify-between gap-1">
+          <span>${d.getMonth()+1}/${d.getDate()} <span class="text-[9px] text-slate-400">${['일','월','화','수','목','금','토'][dow]}</span>${isToday?' <span class="text-[9px] font-bold text-indigo-600">・오늘</span>':''}</span>
+          ${holidayBadge}
+        </div>
+      </div>`;
+    }).join('');
+  headerContainer.appendChild(header);
+
+  const totalContentWidth = 160 + CELL_W*days.length; // 160px = 좌측 장비명 칼럼(w-40)
+  document.getElementById('timeline-topscroll-inner').style.width = `${totalContentWidth}px`;
+  setupTimelineScrollSync();
+
+  const filteredEq = equipments.filter(eq => eq.id!=='holiday' && eq.id!=='event' && (filters.group==='all'||eq.group===filters.group) && (filters.eq==='all'||eq.id===filters.eq));
+
+  if (filteredEq.length===0){
+    container.innerHTML += `<div class="p-10 text-center text-slate-400 text-sm">조건에 맞는 장비가 없습니다.</div>`;
+    return;
+  }
+
+  filteredEq.forEach(eq=>{
+    try {
+    const row = document.createElement('div');
+    row.className='flex border-b border-slate-100';
+    row.style.minHeight='56px';
+
+    const label = document.createElement('div');
+    label.className='w-40 shrink-0 p-2 flex items-center gap-2 bg-slate-50 sticky left-0 z-10';
+    label.innerHTML = `<span>${eq.icon}</span><span class="text-xs font-bold text-slate-700">${eq.name}</span>`;
+    row.appendChild(label);
+
+    const trackWrap = document.createElement('div');
+    trackWrap.className='relative flex';
+    trackWrap.style.width = `${CELL_W*days.length}px`;
+    days.forEach(d=>{
+      const dow=d.getDay();
+      const isToday = fmtISO(d)===todayStr();
+      const isHolidayCol = holidayDateSet.has(fmtISO(d));
+      const cell=document.createElement('div');
+      cell.style.width=`${CELL_W}px`;
+      const bgCls = isHolidayCol?'bg-rose-200':(isToday?'bg-indigo-100/60':(dow===0?'bg-rose-100':dow===6?'bg-blue-100':''));
+      cell.className=`shrink-0 border-l border-slate-100 ${bgCls}`;
+      if (canEdit()){
+        cell.style.cursor='pointer';
+        cell.onclick=()=> openScheduleModal('new', { startDate: fmtISO(d), eqId: eq.id });
+      }
+      trackWrap.appendChild(cell);
+    });
+
+    const eqSchedules = filteredSchedules.filter(s=>s.eqId===eq.id).sort((a,b)=>a.startDate.localeCompare(b.startDate));
+    const winStart = days[0], winEnd = days[days.length-1];
+    let laneEnds = [];
+    let maxLane = 0;
+    eqSchedules.forEach(s=>{
+      const sStart = new Date(s.startDate);
+      const sEnd = new Date(s.startDate); sEnd.setDate(sEnd.getDate()+(parseInt(s.duration)||1)-1);
+      if (sEnd < winStart || sStart > winEnd) return;
+      const dispStart = sStart < winStart ? winStart : sStart;
+      const dispEnd = sEnd > winEnd ? winEnd : sEnd;
+      const offsetDays = Math.round((dispStart-winStart)/86400000);
+      const spanDays = Math.round((dispEnd-dispStart)/86400000)+1;
+
+      let lane=0;
+      while(laneEnds[lane] && laneEnds[lane] >= dispStart) lane++;
+      laneEnds[lane]=dispEnd;
+      maxLane = Math.max(maxLane, lane);
+
+      const bar=document.createElement('div');
+      bar.className=`absolute rounded-lg text-white text-[11px] font-bold px-2 flex items-center shadow cursor-pointer hover:scale-[1.01] transition-transform overflow-hidden whitespace-nowrap ${getBarColorClass(s, eq)}`;
+      bar.style.left=`${offsetDays*CELL_W+3}px`;
+      bar.style.width=`${spanDays*CELL_W-6}px`;
+      bar.style.top=`${6+lane*32}px`;
+      bar.style.height='26px';
+      bar.style.textOverflow='ellipsis';
+      const locked = isMasterSchedule(s);
+      bar.title = `${locked?'[업무현황 자동연동] ':''}${s.title} (${s.startDate}, ${s.duration}일)${s.progressStatus?' · '+s.progressStatus:''}`;
+      bar.innerText = `${locked?'🔒 ':''}${isScheduleCompleted(s)?'✅ ':''}${extractEnglishLabel(s.title)}`;
+      let suppressBarClick = false;
+      bar.onclick=(ev)=>{
+        ev.stopPropagation();
+        if (suppressBarClick){ suppressBarClick=false; return; }
+        openScheduleModal(canEdit()?'edit':'view', s);
+      };
+      trackWrap.style.position='relative';
+      trackWrap.appendChild(bar);
+      attachBarDragHandlers(bar, s, CELL_W, ()=>suppressBarClick=true);
+      if (canSetProgressStatus(s)){
+        bar.addEventListener('mouseenter', ()=>showStatusPopover(bar, s.id));
+        bar.addEventListener('mouseleave', scheduleHideStatusPopover);
+      }
+      if (s.progressStatus === '지연'){
+        const delayBadge = document.createElement('span');
+        delayBadge.className = 'absolute bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow pointer-events-none';
+        delayBadge.style.left = `${offsetDays*CELL_W+3+(spanDays*CELL_W-6)-10}px`;
+        delayBadge.style.top = `${6+lane*32-8}px`;
+        delayBadge.innerText = '⚠️ 지연';
+        trackWrap.appendChild(delayBadge);
+      }
+    });
+    row.style.minHeight = `${44+(maxLane+1)*32}px`;
+    row.appendChild(trackWrap);
+    container.appendChild(row);
+    } catch(err){
+      console.error('타임라인 장비행 렌더링 오류:', err);
+    }
+  });
+}
+
+/* ============================================================
+   테이블 뷰
+============================================================ */
+function sortTable(col){
+  if (tableSort.col===col) tableSort.dir = tableSort.dir==='asc'?'desc':'asc';
+  else { tableSort.col=col; tableSort.dir='asc'; }
+  renderTable();
+}
+
+function renderTable(){
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML='';
+  let filtered = getFilteredSchedules();
+  filtered.sort((a,b)=>{
+    let vA=a[tableSort.col], vB=b[tableSort.col];
+    if (tableSort.col==='startDate') { vA=new Date(vA); vB=new Date(vB); }
+    return tableSort.dir==='asc' ? (vA>vB?1:-1) : (vA<vB?1:-1);
+  });
+  document.getElementById('table-count').innerText = `(${filtered.length})`;
+
+  filtered.forEach(s=>{
+    const eq = getEq(s.eqId);
+    const end = new Date(s.startDate); end.setDate(end.getDate()+(parseInt(s.duration)||1)-1);
+    const tr=document.createElement('tr');
+    tr.className='hover:bg-slate-50 cursor-pointer';
+    tr.onclick=()=>openScheduleModal(canEdit()?'edit':'view', s);
+    const locked = isMasterSchedule(s);
+    const statusBadge = s.status ? `<span class="ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold ${statusColors[s.status]||'bg-slate-100 text-slate-500'}">${s.status}</span>` : '';
+    tr.innerHTML = `
+      <td class="px-5 py-4"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg ${getBarColorClass(s, eq)} flex items-center justify-center text-white font-bold text-xs">${(s.title||'?').charAt(0)}</div><span class="font-bold text-slate-800">${locked?'🔒 ':''}${s.title}</span>${statusBadge}</div></td>
+      <td class="px-5 py-4"><span class="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg text-xs font-bold">${eq?eq.icon:''} ${eq?eq.name:'-'}</span></td>
+      <td class="px-5 py-4 text-center text-sm font-semibold">${locked?'업무현황':(s.owner||'-')}</td>
+      <td class="px-5 py-4 text-center"><span class="bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-full text-xs font-bold">${s.duration}일</span></td>
+      <td class="px-5 py-4 text-right font-mono text-xs text-slate-500"><b>${s.startDate}</b> → ${fmtISO(end)}</td>
+      <td class="px-5 py-4 text-center" onclick="event.stopPropagation()">
+        ${(!locked && canEdit()) ? `<button onclick="openScheduleModal('edit', ${JSON.stringify(s).replace(/"/g,'&quot;')})" class="text-slate-400 hover:text-indigo-600 mr-2">✏️</button><button onclick="requestDeleteSchedule('${s.id}')" class="text-slate-400 hover:text-rose-500">🗑️</button>` : `<span class="text-slate-300 text-xs">${locked?'🔒':'-'}</span>`}
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+/* ============================================================
+   일정 등록/수정/조회 모달
+============================================================ */
+let editingOriginalSchedule = null; // 저장 시 변경사항을 비교하기 위해 열 당시의 원본 값을 보관
+
+function openScheduleModal(mode, data){
+  const locked = isMasterSchedule(data); // 업무현황 자동연동 일정은 항상 읽기 전용
+  if (locked) mode = 'view';
+  editingScheduleReadOnly = (mode==='view');
+  editingOriginalSchedule = data.id ? { ...data } : null;
+  document.getElementById('sch-id').value = data.id || '';
+  document.getElementById('sch-title').value = data.title || '';
+  document.getElementById('sch-eqid').value = data.eqId || equipments[0].id;
+  document.getElementById('sch-owner').value = data.owner || '';
+  document.getElementById('sch-start').value = data.startDate || todayStr();
+  document.getElementById('sch-duration').value = data.duration || 1;
+  document.getElementById('sch-desc').value = data.desc || '';
+  document.getElementById('sch-change-reason').value = '';
+
+  const fields = ['sch-title','sch-eqid','sch-owner','sch-start','sch-duration','sch-desc'];
+  fields.forEach(id=> document.getElementById(id).disabled = editingScheduleReadOnly);
+
+  let tag = mode==='new' ? '신규 일정 등록' : (mode==='edit' ? '시험 정보 수정' : '시험 정보 조회 (읽기 전용)');
+  if (locked) tag = '🔒 업무현황 자동연동 (원본 시트에서만 수정 가능)';
+  document.getElementById('modal-schedule-tag').innerText = tag;
+  document.getElementById('sch-save-btn').classList.toggle('hidden', editingScheduleReadOnly);
+  document.getElementById('sch-delete-btn').classList.toggle('hidden', locked || mode!=='edit' || !canEdit());
+  document.getElementById('sch-change-reason-wrap').classList.toggle('hidden', mode!=='edit');
+  document.getElementById('sch-push-appinput-wrap').classList.toggle('hidden', mode!=='new');
+  document.getElementById('sch-push-appinput').checked = false;
+
+  // 기존 일정이면 변경 이력 조회 (신규 등록 시에는 표시 안 함)
+  const historySection = document.getElementById('sch-history-section');
+  if (data.id && !locked){
+    historySection.classList.remove('hidden');
+    document.getElementById('sch-history-list').innerHTML = `<p class="text-xs text-slate-400">불러오는 중...</p>`;
+    fetchAndRenderHistory(data.id);
+  } else {
+    historySection.classList.add('hidden');
+  }
+
+  openModal('modal-schedule');
+}
+
+async function fetchAndRenderHistory(scheduleId){
+  const listEl = document.getElementById('sch-history-list');
+  try {
+    const res = await gasGet('getHistory', { scheduleId });
+    if (res.status !== 'success' || !res.data || res.data.length===0){
+      listEl.innerHTML = `<p class="text-xs text-slate-400">변경 이력이 없습니다.</p>`;
+      return;
+    }
+    listEl.innerHTML = res.data.map(h => `
+      <div class="text-xs bg-slate-50 rounded-lg p-2.5">
+        <div class="flex justify-between text-[10px] text-slate-400 font-semibold mb-1">
+          <span>${h.changedBy||'-'}</span><span>${(h.changedAt||'').replace('T',' ').slice(0,16)}</span>
+        </div>
+        <p class="text-slate-600"><span class="line-through text-slate-400">${h.oldSummary||''}</span> → <span class="font-bold text-indigo-600">${h.newSummary||''}</span></p>
+        ${h.reason ? `<p class="text-slate-500 mt-1">사유: ${h.reason}</p>` : ''}
+      </div>`).join('');
+  } catch(e){
+    listEl.innerHTML = `<p class="text-xs text-rose-400">이력을 불러오지 못했습니다.</p>`;
+  }
+}
+
+function summarizeChanges(oldS, newS){
+  const fieldLabels = { title:'제목', eqId:'장비', startDate:'시작일', duration:'기간', owner:'담당자', desc:'설명' };
+  const changed = [];
+  Object.keys(fieldLabels).forEach(key=>{
+    let oldVal = oldS[key], newVal = newS[key];
+    if (key==='eqId'){ oldVal = getEq(oldVal)?.name || oldVal; newVal = getEq(newVal)?.name || newVal; }
+    if (key==='duration'){ oldVal = `${oldVal}일`; newVal = `${newVal}일`; }
+    if (String(oldVal||'') !== String(newVal||'')) changed.push({ label: fieldLabels[key], oldVal, newVal });
+  });
+  if (changed.length===0) return null;
+  return {
+    oldSummary: changed.map(c=>`${c.label}: ${c.oldVal||'(없음)'}`).join(', '),
+    newSummary: changed.map(c=>`${c.label}: ${c.newVal||'(없음)'}`).join(', ')
+  };
+}
+
+async function logScheduleHistory(scheduleId, scheduleTitle, oldSummary, newSummary, reason){
+  try {
+    await gasPost('addHistory', { history: { scheduleId, scheduleTitle, changedBy: currentUser.username, oldSummary, newSummary, reason: reason||'' } });
+  } catch(e){ /* 이력 기록 실패는 저장 자체를 막지 않음 */ }
+}
+
+async function pushScheduleToAppInput(schedule){
+  try {
+    const res = await gasPost('pushToAppInput', { schedule });
+    if (res.status==='success'){
+      if (res.filledDays === res.totalDays){
+        showToast(`📋 시험계획표 월별 탭에도 반영했습니다. (${res.filledDays}/${res.totalDays}일)`);
+      } else {
+        showToast(`📋 일부만 반영됐습니다 (${res.filledDays}/${res.totalDays}일). 나머지는 해당 장비 우선순위 칸이 이미 차있어 '어플입력'에만 기록됐어요.`);
+      }
+    } else showToast('시험계획표 반영 실패: '+(res.message||''));
+  } catch(e){ showToast('시험계획표 반영 중 통신 오류가 발생했습니다.'); }
+}
+
+async function saveScheduleFromModal(){
+  const title = document.getElementById('sch-title').value.trim();
+  if (!title) { showToast('항목명을 입력해주세요.'); return; }
+  const idVal = document.getElementById('sch-id').value;
+  const schedule = {
+    id: idVal || Date.now().toString(),
+    title,
+    eqId: document.getElementById('sch-eqid').value,
+    startDate: document.getElementById('sch-start').value,
+    duration: parseInt(document.getElementById('sch-duration').value)||1,
+    owner: document.getElementById('sch-owner').value.trim(),
+    desc: document.getElementById('sch-desc').value.trim(),
+    status: 'active',
+    createdBy: currentUser.username
+  };
+  const reason = document.getElementById('sch-change-reason').value.trim();
+  const pushToAppInput = !idVal && document.getElementById('sch-push-appinput').checked; // 신규 등록에만 해당
+  closeModal('modal-schedule');
+
+  const idx = schedules.findIndex(s=>s.id===schedule.id);
+  const prevSnapshot = idx>-1 ? schedules[idx] : null;
+  if (idx>-1) schedules[idx] = { ...schedules[idx], ...schedule }; // 기존 progressStatus 등은 유지
+  else schedules.push({ ...schedule, progressStatus:'진행' });
+  renderCurrentView(); // 화면 즉시 반영, 서버 응답은 기다리지 않음
+  showToast('저장되었습니다.');
+
+  try {
+    const res = await gasPost('saveSchedule', { schedule });
+    if (res.status!=='success') throw new Error(res.message||'저장 실패');
+    if (idVal && editingOriginalSchedule){
+      const diff = summarizeChanges(editingOriginalSchedule, schedule);
+      if (diff) logScheduleHistory(schedule.id, schedule.title, diff.oldSummary, diff.newSummary, reason);
+    }
+    if (pushToAppInput) pushScheduleToAppInput(schedule); // 완료를 기다리지 않고 백그라운드 진행
+  } catch(e){
+    // 서버 저장 실패 시에만 화면을 원상복구
+    if (prevSnapshot){
+      const idx2 = schedules.findIndex(s=>s.id===schedule.id);
+      if (idx2>-1) schedules[idx2] = prevSnapshot;
+    } else {
+      schedules = schedules.filter(s=>s.id!==schedule.id);
+    }
+    renderCurrentView();
+    showToast('저장에 실패했습니다. 다시 시도해주세요.');
+  }
+}
+
+function deleteScheduleConfirm(){
+  const id = document.getElementById('sch-id').value;
+  if (!id) return;
+  requestDeleteSchedule(id);
+}
+async function requestDeleteSchedule(id){
+  if (!confirm('이 일정을 삭제하시겠습니까?')) return;
+  closeModal('modal-schedule');
+
+  const idx = schedules.findIndex(s=>s.id===id);
+  const removed = idx>-1 ? schedules[idx] : null;
+  schedules = schedules.filter(s=>s.id!==id);
+  renderCurrentView(); // 화면 즉시 반영
+  showToast('삭제되었습니다.');
+
+  try {
+    const res = await gasPost('deleteSchedule', { id });
+    if (res.status!=='success') throw new Error(res.message||'삭제 실패');
+  } catch(e){
+    if (removed) schedules.push(removed); // 실패 시 되돌림
+    renderCurrentView();
+    showToast('삭제에 실패했습니다. 다시 시도해주세요.');
+  }
+}
+
+/* ============================================================
+   편집 권한 요청 (뷰어 → 관리자)
+============================================================ */
+function openPermissionRequestModal(){
+  document.getElementById('perm-request-message').value='';
+  openModal('modal-permission');
+}
+async function submitPermissionRequest(){
+  const message = document.getElementById('perm-request-message').value.trim();
+  setLoading(true);
+  try {
+    const res = await gasPost('requestPermission', { username: currentUser.username, name: currentUser.name, message });
+    if (res.status==='success'){
+      showToast('권한 요청을 보냈습니다. 관리자 승인을 기다려주세요.');
+      closeModal('modal-permission');
+      await loadAllData();
+    } else { showToast('요청 실패: '+(res.message||'')); }
+  } catch(e){ showToast('서버와 통신할 수 없습니다.'); }
+  finally { setLoading(false); }
+}
+
+/* ============================================================
+   관리자 패널: 권한 요청함 / 회원 관리
+============================================================ */
+function openAdminPanel(){
+  switchAdminTab('requests');
+  openModal('modal-admin');
+}
+async function bulkAddHolidays(){
+  if (!confirm(`2026~2035년 공휴일 ${KOREAN_HOLIDAYS_2026_2035.length}건을 등록하시겠습니까?\n이미 등록된 항목은 자동으로 건너뜁니다.`)) return;
+  const btn = document.getElementById('btn-bulk-add-holidays');
+  const resultEl = document.getElementById('bulk-holidays-result');
+  btn.disabled = true;
+  btn.innerText = '등록 중... (몇 초 정도 걸릴 수 있어요)';
+  resultEl.innerText = '';
+
+  const payload = KOREAN_HOLIDAYS_2026_2035.map(h => ({
+    id: 'holi_' + h.date.replace(/-/g,'') + '_' + Math.random().toString(36).slice(2,6),
+    title: h.name,
+    eqId: 'holiday',
+    startDate: h.date,
+    duration: 1,
+    owner: '',
+    desc: '',
+    status: 'active',
+    createdBy: currentUser.username,
+    progressStatus: '진행'
+  }));
+
+  try {
+    const res = await gasPost('bulkAddSchedules', { schedules: payload });
+    if (res.status==='success'){
+      resultEl.className = 'text-xs font-bold text-center mt-3 text-emerald-600';
+      resultEl.innerText = `✅ ${res.added}건 등록 완료 (이미 있던 ${res.skipped}건은 건너뜀)`;
+      showToast('공휴일 일괄 등록이 완료되었습니다.');
+      await loadAllData();
+    } else {
+      resultEl.className = 'text-xs font-bold text-center mt-3 text-rose-500';
+      resultEl.innerText = '실패: ' + (res.message||'');
+    }
+  } catch(e){
+    resultEl.className = 'text-xs font-bold text-center mt-3 text-rose-500';
+    resultEl.innerText = '서버와 통신할 수 없습니다.';
+  } finally {
+    btn.disabled = false;
+    btn.innerText = '🎌 2026~2035년 공휴일 일괄 등록하기';
+  }
+}
+
+function switchAdminTab(tab){
+  document.getElementById('admin-tab-requests').classList.toggle('active', tab==='requests');
+  document.getElementById('admin-tab-users').classList.toggle('active', tab==='users');
+  document.getElementById('admin-tab-holidays').classList.toggle('active', tab==='holidays');
+  document.getElementById('admin-panel-requests').classList.toggle('hidden', tab!=='requests');
+  document.getElementById('admin-panel-users').classList.toggle('hidden', tab!=='users');
+  document.getElementById('admin-panel-holidays').classList.toggle('hidden', tab!=='holidays');
+  if (tab==='requests') renderAdminRequests();
+  else if (tab==='users') renderAdminUsers();
+}
+
+function renderAdminRequests(){
+  const wrap = document.getElementById('admin-panel-requests');
+  const pending = permRequests.filter(r=>r.status==='pending');
+  const resolved = permRequests.filter(r=>r.status!=='pending').slice().reverse().slice(0,10);
+
+  let html = `<h4 class="text-xs font-black text-slate-400 uppercase mb-2">대기 중 (${pending.length})</h4>`;
+  if (pending.length===0) html += `<p class="text-xs text-slate-400 mb-5">대기 중인 요청이 없습니다.</p>`;
+  else {
+    html += `<div class="space-y-2 mb-5">` + pending.map(r=>`
+      <div class="p-3 bg-amber-50 border border-amber-100 rounded-xl flex items-center justify-between gap-3">
+        <div>
+          <p class="text-sm font-bold text-slate-800">${r.name} <span class="text-slate-400 font-normal text-xs">(${r.username})</span></p>
+          <p class="text-xs text-slate-500">${r.message || '(사유 없음)'}</p>
+        </div>
+        <div class="flex gap-1.5 shrink-0">
+          <button onclick="resolvePermissionRequest('${r.id}','approved')" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg">승인</button>
+          <button onclick="resolvePermissionRequest('${r.id}','rejected')" class="bg-slate-200 hover:bg-slate-300 text-slate-600 text-xs font-bold px-3 py-1.5 rounded-lg">거절</button>
+        </div>
+      </div>`).join('') + `</div>`;
+  }
+
+  html += `<h4 class="text-xs font-black text-slate-400 uppercase mb-2">최근 처리 이력</h4>`;
+  if (resolved.length===0) html += `<p class="text-xs text-slate-400">이력이 없습니다.</p>`;
+  else html += `<div class="space-y-1.5">` + resolved.map(r=>`
+      <div class="p-2.5 bg-slate-50 rounded-lg text-xs flex justify-between">
+        <span class="font-semibold text-slate-600">${r.name} (${r.username})</span>
+        <span class="font-bold ${r.status==='approved'?'text-emerald-500':'text-rose-400'}">${r.status==='approved'?'승인됨':'거절됨'}</span>
+      </div>`).join('') + `</div>`;
+
+  wrap.innerHTML = html;
+}
+
+async function resolvePermissionRequest(id, decision){
+  setLoading(true);
+  try {
+    const res = await gasPost('resolveRequest', { id, decision });
+    if (res.status==='success'){
+      showToast(decision==='approved' ? '승인 처리되었습니다.' : '거절 처리되었습니다.');
+      await loadAllData();
+      renderAdminRequests();
+    } else { showToast('처리 실패: '+(res.message||'')); }
+  } catch(e){ showToast('서버와 통신할 수 없습니다.'); }
+  finally { setLoading(false); }
+}
+
+function renderAdminUsers(){
+  const wrap = document.getElementById('admin-panel-users');
+  wrap.innerHTML = `<div class="space-y-2">` + users.map(u=>{
+    const roleLabel = { admin:'👑 관리자', editor:'✏️ 편집자', viewer:'👁️ 뷰어' }[u.role] || u.role;
+    const isSelf = u.username === currentUser.username;
+    return `
+      <div class="p-3 bg-slate-50 rounded-xl flex items-center justify-between gap-3">
+        <div>
+          <p class="text-sm font-bold text-slate-800">${u.name} <span class="text-slate-400 font-normal text-xs">(${u.username})</span> ${isSelf?'<span class="text-[10px] text-indigo-500 font-bold">・나</span>':''}</p>
+          <p class="text-xs text-slate-500">${roleLabel}</p>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <select ${isSelf?'disabled':''} onchange="changeUserRole('${u.username}', this.value)" class="text-xs font-bold border border-slate-200 rounded-lg px-2 py-1.5 bg-white">
+            <option value="viewer" ${u.role==='viewer'?'selected':''}>뷰어</option>
+            <option value="editor" ${u.role==='editor'?'selected':''}>편집자</option>
+            <option value="admin" ${u.role==='admin'?'selected':''}>관리자</option>
+          </select>
+          ${isSelf? '' : `<button onclick="deleteUserConfirm('${u.username}')" class="text-slate-400 hover:text-rose-500 text-sm px-1">🗑️</button>`}
+        </div>
+      </div>`;
+  }).join('') + `</div>`;
+}
+
+async function changeUserRole(username, role){
+  setLoading(true);
+  try {
+    const res = await gasPost('updateUserRole', { username, role });
+    if (res.status==='success'){ showToast('권한이 변경되었습니다.'); await loadAllData(); renderAdminUsers(); }
+    else showToast('변경 실패: '+(res.message||''));
+  } catch(e){ showToast('서버와 통신할 수 없습니다.'); }
+  finally { setLoading(false); }
+}
+
+async function deleteUserConfirm(username){
+  if (!confirm(`${username} 계정을 삭제하시겠습니까?`)) return;
+  setLoading(true);
+  try {
+    const res = await gasPost('deleteUser', { username });
+    if (res.status==='success'){ showToast('회원이 삭제되었습니다.'); await loadAllData(); renderAdminUsers(); }
+    else showToast('삭제 실패: '+(res.message||''));
+  } catch(e){ showToast('서버와 통신할 수 없습니다.'); }
+  finally { setLoading(false); }
+}
+
+/* ---------------------- 모달 공통 ---------------------- */
+/* ============================================================
+   메모 / 회의록
+============================================================ */
+let pendingMemoImages = [];      // 새로 첨부된 이미지 {base64, mimeType, name}
+let pendingMemoImagePromises = []; // 아직 압축/변환이 끝나지 않은 이미지 처리 작업 (저장 전 대기용)
+let existingMemoImageUrls = [];  // 수정 중인 메모에 이미 있던 이미지 URL
+let allMemosCache = null;        // 전체 목록 캐시
+let memoPasteListenerAttached = false;
+
+async function openMemoModal(){
+  document.getElementById('memo-date-picker').value = todayStr();
+  switchMemoTab('date');
+  await loadMemoCategories();
+  resetMemoForm();
+  loadMemosForSelectedDate();
+  attachMemoPasteListener();
+  openModal('modal-memo');
+}
+
+function switchMemoTab(tab){
+  document.getElementById('memo-tab-date').classList.toggle('active', tab==='date');
+  document.getElementById('memo-tab-all').classList.toggle('active', tab==='all');
+  document.getElementById('memo-view-date').classList.toggle('hidden', tab!=='date');
+  document.getElementById('memo-view-all').classList.toggle('hidden', tab!=='all');
+  if (tab==='all') loadAllMemos();
+}
+
+function moveMemoDate(n){
+  const picker = document.getElementById('memo-date-picker');
+  const d = new Date(picker.value || todayStr());
+  d.setDate(d.getDate()+n);
+  picker.value = fmtISO(d);
+  loadMemosForSelectedDate();
+}
+
+function resetMemoForm(){
+  document.getElementById('memo-id').value = '';
+  document.getElementById('memo-title').value = '';
+  document.getElementById('memo-content').value = '';
+  document.getElementById('memo-category').value = memoCategories[0] ? memoCategories[0].name : '';
+  document.getElementById('memo-cancel-edit-btn').classList.add('hidden');
+  pendingMemoImages = [];
+  pendingMemoImagePromises = [];
+  existingMemoImageUrls = [];
+  renderMemoImagePreviews();
+}
+
+/* ---------- 이미지 첨부 (파일선택 / 붙여넣기 공통) ---------- */
+function attachMemoPasteListener(){
+  if (memoPasteListenerAttached) return;
+  memoPasteListenerAttached = true;
+  document.getElementById('memo-image-dropzone').addEventListener('paste', handleMemoImagePaste);
+  document.getElementById('memo-content').addEventListener('paste', handleMemoImagePaste);
+}
+
+function handleMemoImagePaste(ev){
+  const items = (ev.clipboardData && ev.clipboardData.items) || [];
+  let found = false;
+  for (const item of items){
+    if (item.type && item.type.startsWith('image/')){
+      found = true;
+      const file = item.getAsFile();
+      addMemoImageFile(file);
+    }
+  }
+  if (found) ev.preventDefault();
+}
+
+function handleMemoImageFileSelect(ev){
+  Array.from(ev.target.files || []).forEach(addMemoImageFile);
+  ev.target.value = '';
+}
+
+function addMemoImageFile(file){
+  if (!file) return;
+  showToast('이미지 처리 중...');
+  const promise = compressImageToBase64(file, 1280).then(base64 => {
+    pendingMemoImages.push({ base64, mimeType: 'image/jpeg', name: file.name || 'pasted-image.jpg' });
+    renderMemoImagePreviews();
+  }).catch(()=> showToast('이미지를 처리하지 못했습니다.'));
+  pendingMemoImagePromises.push(promise);
+}
+
+// 큰 이미지는 브라우저 캔버스로 리사이즈해서 용량을 줄인 뒤 base64로 변환
+function compressImageToBase64(file, maxWidth){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        resolve(dataUrl.split(',')[1]); // base64 부분만
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// 예전에 저장된 uc?export=view 형식 URL도 화면에 표시할 때는 안정적인 thumbnail 형식으로 즉석 변환
+function toDriveThumbnailUrl(url){
+  if (!url) return url;
+  const m = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (!m) return url;
+  return `https://drive.google.com/thumbnail?id=${m[1]}&sz=w1000`;
+}
+
+function renderMemoImagePreviews(){
+  const wrap = document.getElementById('memo-image-previews');
+  const existing = existingMemoImageUrls.map((url, i) => `
+    <div class="relative">
+      <img src="${toDriveThumbnailUrl(url)}" class="w-16 h-16 object-cover rounded-lg border border-slate-200">
+      <button onclick="removeMemoImage(${i}, true)" class="absolute -top-1.5 -right-1.5 bg-rose-500 text-white rounded-full w-4 h-4 text-[10px] flex items-center justify-center">✕</button>
+    </div>`).join('');
+  const pending = pendingMemoImages.map((img, i) => `
+    <div class="relative">
+      <img src="data:${img.mimeType};base64,${img.base64}" class="w-16 h-16 object-cover rounded-lg border border-amber-300">
+      <button onclick="removeMemoImage(${i}, false)" class="absolute -top-1.5 -right-1.5 bg-rose-500 text-white rounded-full w-4 h-4 text-[10px] flex items-center justify-center">✕</button>
+    </div>`).join('');
+  wrap.innerHTML = existing + pending;
+}
+
+function removeMemoImage(index, isExisting){
+  if (isExisting) existingMemoImageUrls.splice(index,1);
+  else pendingMemoImages.splice(index,1);
+  renderMemoImagePreviews();
+}
+
+/* ---------- 날짜별 보기 ---------- */
+async function loadMemosForSelectedDate(){
+  const dateStr = document.getElementById('memo-date-picker').value;
+  const listEl = document.getElementById('memo-list');
+  listEl.innerHTML = `<p class="text-xs text-slate-400">불러오는 중...</p>`;
+  try {
+    const res = await gasGet('getMemosForDate', { date: dateStr });
+    if (res.status!=='success' || !res.data || res.data.length===0){
+      listEl.innerHTML = `<p class="text-xs text-slate-400">이 날짜에 등록된 메모가 없습니다.</p>`;
+      return;
+    }
+    listEl.innerHTML = res.data.map(renderMemoCard).join('');
+  } catch(e){
+    listEl.innerHTML = `<p class="text-xs text-rose-400">메모를 불러오지 못했습니다.</p>`;
+  }
+}
+
+const CATEGORY_COLOR_PALETTE = {
+  indigo:'bg-indigo-100 text-indigo-700', orange:'bg-orange-100 text-orange-700', rose:'bg-rose-100 text-rose-700',
+  slate:'bg-slate-200 text-slate-600', emerald:'bg-emerald-100 text-emerald-700', purple:'bg-purple-100 text-purple-700',
+  amber:'bg-amber-100 text-amber-700', cyan:'bg-cyan-100 text-cyan-700'
+};
+let memoCategories = []; // 서버에서 불러온 사용자 정의 분류 목록
+let selectedMemoCategoryColor = 'indigo';
+
+function getMemoCategoryMeta(name){
+  const found = memoCategories.find(c=>c.name===name);
+  if (found) return { icon: found.icon||'📎', colorClass: CATEGORY_COLOR_PALETTE[found.color]||CATEGORY_COLOR_PALETTE.slate };
+  return { icon:'📎', colorClass: CATEGORY_COLOR_PALETTE.slate }; // 삭제된 분류를 쓰던 예전 메모용 기본값
+}
+
+async function loadMemoCategories(){
+  try {
+    const res = await gasGet('getMemoCategories');
+    memoCategories = (res.status==='success' && res.data) ? res.data : [];
+  } catch(e){ memoCategories = []; }
+  populateMemoCategorySelect();
+}
+
+function populateMemoCategorySelect(){
+  const sel = document.getElementById('memo-category');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = memoCategories.map(c=>`<option value="${c.name}">${c.icon||'📎'} ${c.name}</option>`).join('');
+  if (memoCategories.some(c=>c.name===current)) sel.value = current;
+}
+
+function renderMemoCard(m){
+  let images = [];
+  try { images = JSON.parse(m.images || '[]'); } catch(e){ images = []; }
+  const imagesHtml = images.length>0
+    ? `<div class="flex flex-wrap gap-1.5 mt-2">${images.map(url=>`<img src="${toDriveThumbnailUrl(url)}" onclick="window.open('${url}','_blank')" class="w-14 h-14 object-cover rounded-lg border border-amber-200 cursor-pointer">`).join('')}</div>`
+    : '';
+  const category = m.category || '기타';
+  const catMeta = getMemoCategoryMeta(category);
+  const categoryBadge = `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${catMeta.colorClass}">${catMeta.icon} ${category}</span>`;
+  return `
+      <div class="p-3 bg-amber-50 border border-amber-100 rounded-xl">
+        <div class="flex justify-between items-start gap-2">
+          <div>
+            <div class="flex items-center gap-1.5 mb-1">${categoryBadge}<span class="text-[10px] text-slate-400">${m.date}</span></div>
+            <p class="text-sm font-bold text-slate-800">${m.title}</p>
+          </div>
+          <div class="flex gap-1 shrink-0">
+            <button onclick='editMemoEntry(${JSON.stringify(m).replace(/'/g,"&#39;")})' class="text-slate-400 hover:text-indigo-600 text-xs">✏️</button>
+            <button onclick="deleteMemoEntry('${m.id}')" class="text-slate-400 hover:text-rose-500 text-xs">🗑️</button>
+          </div>
+        </div>
+        <p class="text-xs text-slate-600 mt-1 whitespace-pre-wrap">${m.content||''}</p>
+        ${imagesHtml}
+        <p class="text-[10px] text-slate-400 mt-2">${m.createdBy||''} · ${(m.updatedAt||m.createdAt||'').replace('T',' ').slice(0,16)}</p>
+      </div>`;
+}
+
+function editMemoEntry(m){
+  switchMemoTab('date');
+  document.getElementById('memo-date-picker').value = m.date;
+  document.getElementById('memo-id').value = m.id;
+  document.getElementById('memo-title').value = m.title;
+  document.getElementById('memo-content').value = m.content || '';
+  document.getElementById('memo-category').value = m.category || '회의록';
+  document.getElementById('memo-cancel-edit-btn').classList.remove('hidden');
+  try { existingMemoImageUrls = JSON.parse(m.images || '[]'); } catch(e){ existingMemoImageUrls = []; }
+  pendingMemoImages = [];
+  renderMemoImagePreviews();
+  loadMemosForSelectedDate();
+}
+
+async function saveMemoEntry(){
+  const title = document.getElementById('memo-title').value.trim();
+  if (!title) { showToast('제목을 입력해주세요.'); return; }
+
+  // 아직 처리 중인 이미지(붙여넣기 압축 등)가 있으면 끝날 때까지 대기 (경쟁상태 방지)
+  if (pendingMemoImagePromises.length > 0){
+    setLoading(true);
+    await Promise.all(pendingMemoImagePromises);
+    pendingMemoImagePromises = [];
+  }
+
+  const images = [
+    ...existingMemoImageUrls.map(url => ({ url })),
+    ...pendingMemoImages
+  ];
+  const memo = {
+    id: document.getElementById('memo-id').value || null,
+    date: document.getElementById('memo-date-picker').value,
+    title,
+    content: document.getElementById('memo-content').value.trim(),
+    category: document.getElementById('memo-category').value,
+    images,
+    createdBy: currentUser.username
+  };
+  setLoading(true);
+  try {
+    const res = await gasPost('saveMemo', { memo });
+    if (res.status==='success'){
+      if (res.uploadErrors && res.uploadErrors.length){
+        showToast(`저장은 됐지만 이미지 ${res.uploadErrors.length}개는 업로드 실패: ${res.uploadErrors[0]}`);
+      } else {
+        showToast('메모가 저장되었습니다.');
+      }
+      resetMemoForm();
+      loadMemosForSelectedDate();
+      allMemosCache = null; // 전체목록 캐시 무효화
+    } else showToast('저장 실패: '+(res.message||''));
+  } catch(e){ showToast('서버와 통신할 수 없습니다.'); }
+  finally { setLoading(false); }
+}
+
+async function deleteMemoEntry(id){
+  if (!confirm('이 메모를 삭제하시겠습니까?')) return;
+  setLoading(true);
+  try {
+    const res = await gasPost('deleteMemo', { id });
+    if (res.status==='success'){
+      showToast('삭제되었습니다.');
+      loadMemosForSelectedDate();
+      allMemosCache = null;
+    } else showToast('삭제 실패: '+(res.message||''));
+  } catch(e){ showToast('서버와 통신할 수 없습니다.'); }
+  finally { setLoading(false); }
+}
+
+/* ---------- 전체 목록 보기 ---------- */
+async function loadAllMemos(){
+  const listEl = document.getElementById('memo-all-list');
+  listEl.innerHTML = `<p class="text-xs text-slate-400">불러오는 중...</p>`;
+  try {
+    const res = await gasGet('getAllMemos');
+    allMemosCache = (res.status==='success' && res.data) ? res.data : [];
+    renderAllMemosList();
+  } catch(e){
+    listEl.innerHTML = `<p class="text-xs text-rose-400">메모를 불러오지 못했습니다.</p>`;
+  }
+}
+
+let memoCategoryFilter = 'all';
+
+/* ---------- 메모 분류 관리 ---------- */
+async function openMemoCategoryManageModal(){
+  await loadMemoCategories();
+  resetMemoCategoryForm();
+  renderMemoCategoryManageList();
+  openModal('modal-memo-category');
+}
+
+function renderMemoCategoryColorPicker(){
+  const wrap = document.getElementById('memo-category-color-picker');
+  wrap.innerHTML = Object.keys(CATEGORY_COLOR_PALETTE).map(key=>{
+    const active = selectedMemoCategoryColor===key;
+    return `<button type="button" onclick="selectMemoCategoryColor('${key}')" class="w-7 h-7 rounded-full ${CATEGORY_COLOR_PALETTE[key].split(' ')[0]} ${active?'ring-2 ring-offset-2 ring-slate-800':''}"></button>`;
+  }).join('');
+}
+function selectMemoCategoryColor(key){
+  selectedMemoCategoryColor = key;
+  renderMemoCategoryColorPicker();
+}
+
+function renderMemoCategoryManageList(){
+  const wrap = document.getElementById('memo-category-manage-list');
+  if (memoCategories.length===0){ wrap.innerHTML = `<p class="text-xs text-slate-400">등록된 분류가 없습니다.</p>`; return; }
+  wrap.innerHTML = memoCategories.map(c=>{
+    const colorClass = CATEGORY_COLOR_PALETTE[c.color]||CATEGORY_COLOR_PALETTE.slate;
+    return `
+      <div class="flex items-center justify-between p-2 bg-slate-50 rounded-lg">
+        <span class="text-xs font-bold px-2 py-1 rounded ${colorClass}">${c.icon||'📎'} ${c.name}</span>
+        <div class="flex gap-1.5">
+          <button onclick='editMemoCategoryEntry(${JSON.stringify(c).replace(/'/g,"&#39;")})' class="text-slate-400 hover:text-indigo-600 text-xs">✏️</button>
+          <button onclick="deleteMemoCategoryEntry('${c.id}')" class="text-slate-400 hover:text-rose-500 text-xs">🗑️</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function resetMemoCategoryForm(){
+  document.getElementById('memo-category-edit-id').value = '';
+  document.getElementById('memo-category-name').value = '';
+  document.getElementById('memo-category-icon').value = '';
+  document.getElementById('memo-category-cancel-btn').classList.add('hidden');
+  selectedMemoCategoryColor = 'indigo';
+  renderMemoCategoryColorPicker();
+}
+
+function editMemoCategoryEntry(c){
+  document.getElementById('memo-category-edit-id').value = c.id;
+  document.getElementById('memo-category-name').value = c.name;
+  document.getElementById('memo-category-icon').value = c.icon || '';
+  document.getElementById('memo-category-cancel-btn').classList.remove('hidden');
+  selectedMemoCategoryColor = c.color || 'indigo';
+  renderMemoCategoryColorPicker();
+}
+
+async function saveMemoCategoryEntry(){
+  const name = document.getElementById('memo-category-name').value.trim();
+  if (!name) { showToast('분류 이름을 입력해주세요.'); return; }
+  const category = {
+    id: document.getElementById('memo-category-edit-id').value || null,
+    name,
+    icon: document.getElementById('memo-category-icon').value.trim() || '📎',
+    color: selectedMemoCategoryColor
+  };
+  setLoading(true);
+  try {
+    const res = await gasPost('saveMemoCategory', { category });
+    if (res.status==='success'){
+      showToast('분류가 저장되었습니다.');
+      resetMemoCategoryForm();
+      await loadMemoCategories();
+      renderMemoCategoryManageList();
+    } else showToast('저장 실패: '+(res.message||''));
+  } catch(e){ showToast('서버와 통신할 수 없습니다.'); }
+  finally { setLoading(false); }
+}
+
+async function deleteMemoCategoryEntry(id){
+  if (!confirm('이 분류를 삭제하시겠습니까? (이 분류로 저장된 기존 메모는 그대로 남아있습니다)')) return;
+  setLoading(true);
+  try {
+    const res = await gasPost('deleteMemoCategory', { id });
+    if (res.status==='success'){
+      showToast('삭제되었습니다.');
+      await loadMemoCategories();
+      renderMemoCategoryManageList();
+    } else showToast('삭제 실패: '+(res.message||''));
+  } catch(e){ showToast('서버와 통신할 수 없습니다.'); }
+  finally { setLoading(false); }
+}
+
+function setMemoCategoryFilter(cat){
+  memoCategoryFilter = cat;
+  renderAllMemosList();
+}
+
+function renderMemoCategoryFilterPills(){
+  const wrap = document.getElementById('memo-category-filter');
+  const cats = ['all', ...memoCategories.map(c=>c.name)];
+  wrap.innerHTML = cats.map(c=>{
+    const label = c==='all' ? '전체' : `${getMemoCategoryMeta(c).icon} ${c}`;
+    const active = memoCategoryFilter===c;
+    return `<button onclick="setMemoCategoryFilter('${c}')" class="text-[11px] font-bold px-2.5 py-1 rounded-full border transition-all ${active?'bg-amber-500 text-white border-amber-500':'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}">${label}</button>`;
+  }).join('');
+}
+
+function renderAllMemosList(){
+  const listEl = document.getElementById('memo-all-list');
+  if (!allMemosCache){ listEl.innerHTML = `<p class="text-xs text-slate-400">불러오는 중...</p>`; return; }
+  renderMemoCategoryFilterPills();
+  const q = document.getElementById('memo-all-search').value.toLowerCase().trim();
+  const filtered = allMemosCache.filter(m => {
+    if (memoCategoryFilter!=='all' && (m.category||'기타')!==memoCategoryFilter) return false;
+    if (!q) return true;
+    return (m.title||'').toLowerCase().includes(q) || (m.content||'').toLowerCase().includes(q);
+  });
+  if (filtered.length===0){ listEl.innerHTML = `<p class="text-xs text-slate-400">해당하는 메모가 없습니다.</p>`; return; }
+
+  // 년-월별로 그룹핑 (최신순으로 이미 정렬되어 도착함)
+  const groups = {};
+  const order = [];
+  filtered.forEach(m=>{
+    const ym = (m.date||'').slice(0,7); // YYYY-MM
+    if (!groups[ym]){ groups[ym]=[]; order.push(ym); }
+    groups[ym].push(m);
+  });
+
+  listEl.innerHTML = order.map((ym, idx)=>{
+    const [y,mo] = ym.split('-');
+    const label = (y && mo) ? `${y}년 ${parseInt(mo)}월` : '날짜 미상';
+    const isOpen = idx===0; // 가장 최근 달만 기본으로 펼쳐서 한눈에 안 복잡하게
+    return `
+      <details class="bg-white border border-slate-200 rounded-xl" ${isOpen?'open':''}>
+        <summary class="cursor-pointer select-none px-3 py-2.5 font-bold text-xs text-slate-600 flex items-center justify-between">
+          <span>📅 ${label}</span><span class="text-slate-400 font-normal">${groups[ym].length}건</span>
+        </summary>
+        <div class="p-2 space-y-2 border-t border-slate-100">${groups[ym].map(renderMemoCard).join('')}</div>
+      </details>`;
+  }).join('');
+}
+
+function openModal(id){ document.getElementById(id).style.display='flex'; }
+function closeModal(id){ document.getElementById(id).style.display='none'; }
+</script>
+</body>
+</html>
