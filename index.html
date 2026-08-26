@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 시험 스케줄 관리 시스템 V1.26.0 (자동계획 수립: 추가입력=타이틀 전용, 상세내용 필드 신설) -->
+<!-- 시험 스케줄 관리 시스템 V1.26.2 (관리자 외 회원: 자동계획 수립/마스터 반영 중복 정리/메모 회의록/휴일 등록 메뉴 숨김) -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -21,6 +21,20 @@
   /* 브라우저 주소창/북마크바 등을 감안해 vh% 대신 "화면높이-고정여백" 방식으로 계산 (V1.12.0) */
   .view-scroll-area{max-height:calc(100vh - 300px); min-height:160px;}
   .calendar-day-box{min-height:110px;background:#fff;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:6px;display:flex;flex-direction:column;gap:3px;}
+  /* 모바일/태블릿 대응 (V1.26.1): 캘린더/스크롤영역/모달 등을 좁은 화면에 맞게 축소 */
+  @media (max-width:1024px){
+    .view-scroll-area{max-height:calc(100vh - 280px);}
+  }
+  @media (max-width:640px){
+    .view-scroll-area{max-height:calc(100vh - 260px); min-height:140px;}
+    .calendar-day-box{min-height:64px;padding:3px;gap:2px;}
+    .calendar-item-chip{font-size:9px;padding:1px 4px;}
+    .modal-overlay{padding:.5rem;}
+    .tab-btn{padding:.5rem 1rem;font-size:.8rem;}
+  }
+  @media (max-width:400px){
+    .calendar-day-box{min-height:52px;}
+  }
   .calendar-day-box.is-today{background:#eef2ff;box-shadow:inset 0 0 0 2px #6366f1;position:relative;}
   .calendar-day-box.weekend-sun-shade{background:#fee2e2;}
   .calendar-day-box.weekend-sat-shade{background:#dbeafe;}
@@ -54,8 +68,8 @@
 </div>
 
 <!-- ===================== 화면 0: 서버(구글시트) 연결 설정 ===================== -->
-<div id="screen-setup" class="hidden max-w-lg mx-auto mt-16">
-  <div class="glass-card rounded-[32px] p-8">
+<div id="screen-setup" class="hidden max-w-lg mx-auto mt-8 sm:mt-16 px-3 sm:px-0">
+  <div class="glass-card rounded-[32px] p-5 sm:p-8">
     <div class="flex items-center gap-3 mb-2">
       <div class="bg-indigo-600 p-3 rounded-2xl shadow-lg"><span class="text-white text-xl">🔗</span></div>
       <div>
@@ -78,13 +92,13 @@
 </div>
 
 <!-- ===================== 화면 1: 로그인 / 회원가입 ===================== -->
-<div id="screen-auth" class="hidden max-w-md mx-auto mt-16">
-  <div class="glass-card rounded-[32px] p-8">
+<div id="screen-auth" class="hidden max-w-md mx-auto mt-8 sm:mt-16 px-3 sm:px-0">
+  <div class="glass-card rounded-[32px] p-5 sm:p-8">
     <div class="flex items-center gap-3 mb-6">
       <div class="bg-indigo-600 p-3 rounded-2xl shadow-lg"><span class="text-white text-xl">🧪</span></div>
       <div>
         <h1 class="text-xl font-black text-slate-800">시험 스케줄 관리 시스템</h1>
-        <p class="text-[11px] text-indigo-500 font-bold uppercase tracking-wide">V1.26.0</p>
+        <p class="text-[11px] text-indigo-500 font-bold uppercase tracking-wide">V1.26.2</p>
       </div>
     </div>
     <div class="flex bg-slate-100 p-1 rounded-xl mb-6">
@@ -118,16 +132,16 @@
   <header class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
     <div class="flex items-center gap-4">
       <div class="bg-indigo-600 p-3 rounded-2xl shadow-lg"><span class="text-white text-2xl">🧪</span></div>
-      <div>
-        <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">시험 스케줄 관리 시스템
-          <span class="text-xs font-normal bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">V1.26.0</span>
+      <div class="min-w-0">
+        <h1 class="text-lg sm:text-2xl font-bold text-slate-800 flex items-center flex-wrap gap-2">시험 스케줄 관리 시스템
+          <span class="text-xs font-normal bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">V1.26.2</span>
         </h1>
-        <p class="text-sm text-indigo-500 font-medium">구글시트 연동 · 🔒 업무현황 자동반영</p>
+        <p class="text-xs sm:text-sm text-indigo-500 font-medium">구글시트 연동 · 🔒 업무현황 자동반영</p>
       </div>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 flex-wrap sm:justify-end">
       <span id="user-role-badge" class="px-3 py-1.5 rounded-full text-xs font-black role-badge-viewer"></span>
-      <span id="user-name-label" class="text-sm font-bold text-slate-700 mr-1"></span>
+      <span id="user-name-label" class="text-sm font-bold text-slate-700 mr-1 truncate max-w-[120px]"></span>
       <button id="btn-request-permission" onclick="openPermissionRequestModal()" class="hidden bg-amber-100 text-amber-700 px-3 py-2 rounded-xl font-bold text-xs hover:bg-amber-200 transition-all">🙋 편집 권한 요청</button>
       <button id="btn-admin-panel" onclick="openAdminPanel()" class="hidden bg-slate-800 text-white px-3 py-2 rounded-xl font-bold text-xs hover:bg-slate-900 transition-all">⚙️ 관리자 패널</button>
       <button onclick="loadAllData()" class="bg-white text-slate-600 border border-slate-200 px-3 py-2 rounded-xl font-bold text-xs shadow-sm hover:bg-slate-50 transition-all">🔄</button>
@@ -135,15 +149,15 @@
     </div>
   </header>
 
-  <div class="flex flex-col lg:flex-row items-start gap-5">
+  <div class="flex flex-col md:flex-row items-start gap-5">
     <!-- 사이드패널: 뷰 전환 + 필터 -->
-    <aside class="glass-card rounded-2xl p-5 w-full lg:w-60 shrink-0 lg:sticky lg:top-5 space-y-5">
+    <aside class="glass-card rounded-2xl p-4 sm:p-5 w-full md:w-60 shrink-0 md:sticky md:top-5 space-y-5">
       <div>
         <span class="text-[11px] font-black text-slate-400 uppercase block mb-2">보기</span>
-        <div class="flex flex-col gap-1">
-          <button id="tab-view-calendar" onclick="switchView('calendar')" class="tab-btn active block w-full text-left">🗓️ 캘린더</button>
-          <button id="tab-view-timeline" onclick="switchView('timeline')" class="tab-btn block w-full text-left">➡️ 타임라인</button>
-          <button id="tab-view-table" onclick="switchView('table')" class="tab-btn block w-full text-left">📋 테이블</button>
+        <div class="grid grid-cols-3 gap-1 md:flex md:flex-col">
+          <button id="tab-view-calendar" onclick="switchView('calendar')" class="tab-btn active block w-full text-center md:text-left !px-1.5 sm:!px-3 md:!px-[1.4rem] !text-[11px] sm:!text-xs md:!text-[.85rem]">🗓️ 캘린더</button>
+          <button id="tab-view-timeline" onclick="switchView('timeline')" class="tab-btn block w-full text-center md:text-left !px-1.5 sm:!px-3 md:!px-[1.4rem] !text-[11px] sm:!text-xs md:!text-[.85rem]">➡️ 타임라인</button>
+          <button id="tab-view-table" onclick="switchView('table')" class="tab-btn block w-full text-center md:text-left !px-1.5 sm:!px-3 md:!px-[1.4rem] !text-[11px] sm:!text-xs md:!text-[.85rem]">📋 테이블</button>
         </div>
       </div>
       <div class="border-t border-slate-100"></div>
@@ -166,7 +180,7 @@
       <div class="border-t border-slate-100 pt-4 space-y-2">
         <button id="btn-auto-schedule" onclick="openAutoScheduleModal1()" class="hidden w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs py-2.5 rounded-xl transition-all">🤖 자동계획 수립</button>
         <button id="btn-dedupe-master" onclick="openDedupeMasterModal()" class="hidden w-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs py-2.5 rounded-xl transition-all">🧹 마스터 반영 중복 정리</button>
-        <button onclick="openMemoModal()" class="w-full bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-bold text-xs py-2.5 rounded-xl transition-all">📝 메모 / 회의록</button>
+        <button id="btn-memo" onclick="openMemoModal()" class="hidden w-full bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-bold text-xs py-2.5 rounded-xl transition-all">📝 메모 / 회의록</button>
       </div>
     </aside>
 
@@ -174,7 +188,7 @@
     <div class="flex-1 min-w-0 w-full">
 
   <!-- 캘린더 뷰 -->
-  <div id="view-calendar" class="glass-card rounded-[32px] overflow-hidden p-6">
+  <div id="view-calendar" class="glass-card rounded-[32px] overflow-hidden p-3 sm:p-6">
     <div class="flex justify-between items-center mb-6">
       <div class="flex items-center gap-3">
         <button onclick="moveCalendarMonth(-1)" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold">❮</button>
@@ -196,7 +210,7 @@
   </div>
 
   <!-- 타임라인 뷰 -->
-  <div id="view-timeline" class="hidden glass-card rounded-[32px] overflow-hidden p-6">
+  <div id="view-timeline" class="hidden glass-card rounded-[32px] overflow-hidden p-3 sm:p-6">
     <div class="flex justify-between items-center mb-5">
       <div class="flex items-center gap-3">
         <button onclick="moveTimelineMonth(-1)" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold">❮</button>
@@ -225,7 +239,7 @@
   </div>
 
   <!-- 테이블 뷰 -->
-  <div id="view-table" class="hidden glass-card rounded-[32px] overflow-hidden p-6">
+  <div id="view-table" class="hidden glass-card rounded-[32px] overflow-hidden p-3 sm:p-6">
     <div class="pb-4 mb-2 border-b border-slate-100 flex justify-between items-center">
       <h2 class="text-lg font-bold text-slate-800">전체 시험 스케줄 목록 <span class="text-indigo-600" id="table-count">(0)</span></h2>
     </div>
@@ -233,12 +247,12 @@
       <table class="w-full text-left border-collapse">
         <thead class="bg-slate-50 sticky top-0 z-10">
           <tr>
-            <th class="px-5 py-4 text-[10px] font-black text-slate-400 uppercase cursor-pointer" onclick="sortTable('title')">항목명</th>
-            <th class="px-5 py-4 text-[10px] font-black text-slate-400 uppercase cursor-pointer" onclick="sortTable('eqId')">장비</th>
-            <th class="px-5 py-4 text-[10px] font-black text-slate-400 uppercase cursor-pointer text-center" onclick="sortTable('owner')">담당자</th>
-            <th class="px-5 py-4 text-[10px] font-black text-slate-400 uppercase cursor-pointer text-center" onclick="sortTable('duration')">기간</th>
-            <th class="px-5 py-4 text-[10px] font-black text-slate-400 uppercase cursor-pointer text-right" onclick="sortTable('startDate')">시작일</th>
-            <th class="px-5 py-4 text-[10px] font-black text-slate-400 uppercase text-center">액션</th>
+            <th class="px-3 py-3 sm:px-5 sm:py-4 text-[10px] font-black text-slate-400 uppercase cursor-pointer" onclick="sortTable('title')">항목명</th>
+            <th class="px-3 py-3 sm:px-5 sm:py-4 text-[10px] font-black text-slate-400 uppercase cursor-pointer" onclick="sortTable('eqId')">장비</th>
+            <th class="hidden sm:table-cell px-3 py-3 sm:px-5 sm:py-4 text-[10px] font-black text-slate-400 uppercase cursor-pointer text-center" onclick="sortTable('owner')">담당자</th>
+            <th class="hidden sm:table-cell px-3 py-3 sm:px-5 sm:py-4 text-[10px] font-black text-slate-400 uppercase cursor-pointer text-center" onclick="sortTable('duration')">기간</th>
+            <th class="px-3 py-3 sm:px-5 sm:py-4 text-[10px] font-black text-slate-400 uppercase cursor-pointer text-right" onclick="sortTable('startDate')">시작일</th>
+            <th class="px-3 py-3 sm:px-5 sm:py-4 text-[10px] font-black text-slate-400 uppercase text-center">액션</th>
           </tr>
         </thead>
         <tbody id="table-body" class="divide-y divide-slate-100"></tbody>
@@ -251,7 +265,7 @@
 
 <!-- ===================== 모달: 일정 등록/수정/조회 ===================== -->
 <div id="modal-schedule" class="modal-overlay">
-  <div class="glass-card bg-white w-full max-w-lg rounded-[32px] p-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
+  <div class="glass-card bg-white w-full max-w-lg rounded-[32px] p-5 sm:p-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
     <div class="flex justify-between items-start mb-5">
       <div class="px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-indigo-100 text-indigo-600" id="modal-schedule-tag">시험 정보</div>
       <button onclick="closeModal('modal-schedule')" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
@@ -295,7 +309,7 @@
 
 <!-- ===================== 모달: 드래그/리사이즈 변경 확인 ===================== -->
 <div id="modal-change-confirm" class="modal-overlay">
-  <div class="glass-card bg-white w-full max-w-sm rounded-[32px] p-8">
+  <div class="glass-card bg-white w-full max-w-sm rounded-[32px] p-5 sm:p-8">
     <h3 class="text-lg font-bold text-slate-800 mb-1">📅 일정 변경 확인</h3>
     <p id="change-confirm-title" class="text-xs text-slate-500 font-semibold mb-4"></p>
     <div class="bg-slate-50 rounded-xl p-3 text-xs font-semibold text-slate-600 mb-4 space-y-1">
@@ -313,7 +327,7 @@
 
 <!-- ===================== 모달: 지그 리소스 부족 경고 ===================== -->
 <div id="modal-jig-conflict" class="modal-overlay">
-  <div class="glass-card bg-white w-full max-w-sm rounded-[32px] p-8">
+  <div class="glass-card bg-white w-full max-w-sm rounded-[32px] p-5 sm:p-8">
     <h3 class="text-lg font-bold text-rose-600 mb-1">⚠️ 지그 부족 경고</h3>
     <p class="text-xs text-slate-500 font-semibold mb-4">시험지그 리소스 제약으로, 동일 차종·품목은 같은 일정에 최대 2건까지만 권장됩니다.</p>
     <div id="jig-conflict-summary" class="bg-rose-50 border border-rose-100 rounded-xl p-3 text-xs text-rose-700 font-bold mb-3"></div>
@@ -327,7 +341,7 @@
 
 <!-- ===================== 모달: 자동계획 수립 1단계 (기본정보) ===================== -->
 <div id="modal-auto1" class="modal-overlay">
-  <div class="glass-card bg-white w-full max-w-md rounded-[32px] p-8">
+  <div class="glass-card bg-white w-full max-w-md rounded-[32px] p-5 sm:p-8">
     <div class="flex justify-between items-start mb-1">
       <h3 class="text-lg font-bold text-slate-800">🤖 자동계획 수립 · 1/2</h3>
       <button onclick="closeModal('modal-auto1')" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
@@ -358,7 +372,7 @@
 
 <!-- ===================== 모달: 자동계획 수립 2단계 (일정정보 + 결과) ===================== -->
 <div id="modal-auto2" class="modal-overlay">
-  <div class="glass-card bg-white w-full max-w-md rounded-[32px] p-8">
+  <div class="glass-card bg-white w-full max-w-md rounded-[32px] p-5 sm:p-8">
     <div class="flex justify-between items-start mb-1">
       <h3 class="text-lg font-bold text-slate-800">🤖 자동계획 수립 · 2/2</h3>
       <button onclick="closeModal('modal-auto2')" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
@@ -374,7 +388,7 @@
           <span class="normal-case font-bold text-indigo-500 cursor-pointer" onclick="toggleAllAutoTargets()">전체선택/해제</span>
         </label>
         <p class="text-[10px] text-slate-400 font-semibold mb-1.5">체크한 장비마다 기간을 각각 다르게 지정할 수 있습니다.</p>
-        <div class="flex items-center gap-2 mb-2 bg-slate-50 rounded-lg p-2">
+        <div class="flex items-center gap-2 mb-2 bg-slate-50 rounded-lg p-2 flex-wrap">
           <span class="text-[10px] text-slate-500 font-bold whitespace-nowrap">선택된 항목에 기간 일괄 적용</span>
           <input id="auto-duration-bulk" type="number" min="1" value="1" class="field-input !py-1 !px-2 !w-16 text-center text-xs">
           <button type="button" onclick="applyBulkAutoDuration()" class="text-[11px] font-bold text-indigo-600 hover:underline whitespace-nowrap">적용</button>
@@ -402,7 +416,7 @@
 
 <!-- ===================== 모달: 마스터 반영 중복 정리 (V1.26.0) ===================== -->
 <div id="modal-dedupe" class="modal-overlay">
-  <div class="glass-card bg-white w-full max-w-lg rounded-[32px] p-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
+  <div class="glass-card bg-white w-full max-w-lg rounded-[32px] p-5 sm:p-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
     <div class="flex justify-between items-start mb-1">
       <h3 class="text-lg font-bold text-slate-800">🧹 마스터 반영 중복 정리</h3>
       <button onclick="closeModal('modal-dedupe')" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
@@ -422,7 +436,7 @@
 
 <!-- ===================== 모달: 메모 / 회의록 ===================== -->
 <div id="modal-memo" class="modal-overlay">
-  <div class="glass-card bg-white w-full max-w-lg rounded-[32px] p-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
+  <div class="glass-card bg-white w-full max-w-lg rounded-[32px] p-5 sm:p-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
     <div class="flex justify-between items-start mb-4">
       <h3 class="text-lg font-bold text-slate-800">📝 메모 / 회의록</h3>
       <button onclick="closeModal('modal-memo')" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
@@ -484,7 +498,7 @@
 
 <!-- ===================== 모달: 메모 분류 관리 ===================== -->
 <div id="modal-memo-category" class="modal-overlay">
-  <div class="glass-card bg-white w-full max-w-sm rounded-[32px] p-8">
+  <div class="glass-card bg-white w-full max-w-sm rounded-[32px] p-5 sm:p-8">
     <div class="flex justify-between items-start mb-4">
       <h3 class="text-lg font-bold text-slate-800">🏷️ 메모 분류 관리</h3>
       <button onclick="closeModal('modal-memo-category')" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
@@ -510,7 +524,7 @@
 
 <!-- ===================== 모달: 특정일 전체 일정 목록 ===================== -->
 <div id="modal-daylist" class="modal-overlay">
-  <div class="glass-card bg-white w-full max-w-lg rounded-[32px] p-8 max-h-[80vh] overflow-y-auto custom-scrollbar">
+  <div class="glass-card bg-white w-full max-w-lg rounded-[32px] p-5 sm:p-8 max-h-[80vh] overflow-y-auto custom-scrollbar">
     <div class="flex justify-between items-start mb-1">
       <h3 id="daylist-title" class="text-lg font-bold text-slate-800">일정 목록</h3>
       <button onclick="closeModal('modal-daylist')" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
@@ -522,7 +536,7 @@
 
 <!-- ===================== 모달: 편집 권한 요청 ===================== -->
 <div id="modal-permission" class="modal-overlay">
-  <div class="glass-card bg-white w-full max-w-sm rounded-[32px] p-8">
+  <div class="glass-card bg-white w-full max-w-sm rounded-[32px] p-5 sm:p-8">
     <h3 class="text-lg font-bold text-slate-800 mb-1">🙋 편집 권한 요청</h3>
     <p class="text-xs text-slate-400 font-semibold mb-5">관리자가 승인하면 일정을 직접 등록/수정할 수 있어요.</p>
     <label class="field-label">요청 사유 (선택)</label>
@@ -537,7 +551,7 @@
 
 <!-- ===================== 모달: 관리자 패널 ===================== -->
 <div id="modal-admin" class="modal-overlay">
-  <div class="glass-card bg-white w-full max-w-2xl rounded-[32px] p-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
+  <div class="glass-card bg-white w-full max-w-2xl rounded-[32px] p-5 sm:p-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
     <div class="flex justify-between items-start mb-5">
       <h3 class="text-lg font-bold text-slate-800">⚙️ 관리자 패널</h3>
       <button onclick="closeModal('modal-admin')" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
@@ -562,7 +576,7 @@
 
 <script>
 /* =====================================================================
-   시험 스케줄 관리 시스템 V1.26.0
+   시험 스케줄 관리 시스템 V1.26.2
    - 구글 Apps Script(GAS) 웹앱을 백엔드로 사용
    - 로그인/회원가입, 관리자-편집자-뷰어 권한, 캘린더/타임라인/테이블 뷰
 ===================================================================== */
@@ -1517,10 +1531,11 @@ function renderUserBadge(){
 
   document.getElementById('btn-admin-panel').classList.toggle('hidden', !isAdmin());
   document.getElementById('btn-request-permission').classList.toggle('hidden', !isViewer());
-  document.getElementById('btn-holiday-calendar').classList.toggle('hidden', !canEdit());
-  document.getElementById('btn-holiday-timeline').classList.toggle('hidden', !canEdit());
-  document.getElementById('btn-auto-schedule').classList.toggle('hidden', !canEdit());
-  document.getElementById('btn-dedupe-master').classList.toggle('hidden', !canEdit());
+  document.getElementById('btn-holiday-calendar').classList.toggle('hidden', !isAdmin());
+  document.getElementById('btn-holiday-timeline').classList.toggle('hidden', !isAdmin());
+  document.getElementById('btn-auto-schedule').classList.toggle('hidden', !isAdmin());
+  document.getElementById('btn-dedupe-master').classList.toggle('hidden', !isAdmin());
+  document.getElementById('btn-memo').classList.toggle('hidden', !isAdmin());
 }
 
 /* ---------------------- 데이터 로드 ---------------------- */
@@ -1885,7 +1900,7 @@ function goToTodayInTimeline(){
     const wrap = document.getElementById('timeline-scroll-wrap');
     if (!wrap) return;
     const dayIndex = new Date().getDate()-1; // 0-based
-    const todayCenter = dayIndex*TIMELINE_CELL_W + TIMELINE_CELL_W/2 + 160; // 160px = 좌측 장비명 칼럼(w-40) 보정
+    const todayCenter = dayIndex*TIMELINE_CELL_W + TIMELINE_CELL_W/2 + TIMELINE_LABEL_W; // TIMELINE_LABEL_W = 좌측 장비명 칼럼 보정 (화면폭에 따라 가변)
     wrap.scrollLeft = todayCenter - wrap.clientWidth/2;
   });
 }
@@ -2020,14 +2035,19 @@ async function confirmChangeConfirm(){
   }
 }
 
-const TIMELINE_CELL_W = 180; // 타임라인 날짜 칸 너비 (전역화: 오늘 버튼 스크롤 계산에도 사용)
+let TIMELINE_CELL_W = 180; // 타임라인 날짜 칸 너비 (전역화: 오늘 버튼 스크롤 계산에도 사용, 모바일/태블릿에서는 renderTimeline()이 화면폭에 맞춰 재계산)
+let TIMELINE_LABEL_W = 160; // 좌측 장비명 칼럼 너비 (모바일/태블릿에서는 renderTimeline()이 재계산)
 
 function renderTimeline(){
+  // 모바일/태블릿 대응 (V1.26.1): 화면 폭에 따라 날짜 칸/장비명 칼럼 너비를 축소해 한눈에 더 많이 보이게 함
+  TIMELINE_CELL_W = window.innerWidth < 480 ? 76 : window.innerWidth < 768 ? 100 : window.innerWidth < 1024 ? 140 : 180;
+  TIMELINE_LABEL_W = window.innerWidth < 768 ? 88 : 160;
   const container = document.getElementById('timeline-body');
   container.innerHTML='';
   const headerContainer = document.getElementById('timeline-header-inner');
   headerContainer.innerHTML='';
   const CELL_W = TIMELINE_CELL_W;
+  const LABEL_W = TIMELINE_LABEL_W;
   const year = currentMonthDate.getFullYear(), month = currentMonthDate.getMonth();
   const lastDate = new Date(year, month+1, 0).getDate();
   const days = [];
@@ -2039,7 +2059,7 @@ function renderTimeline(){
 
   const header = document.createElement('div');
   header.className='flex bg-white border-b-2 border-slate-200';
-  header.innerHTML = `<div class="w-40 shrink-0 p-2 text-[10px] font-black text-slate-400 uppercase flex items-center sticky left-0 bg-white z-20">장비</div>` +
+  header.innerHTML = `<div style="width:${LABEL_W}px" class="shrink-0 p-2 text-[10px] font-black text-slate-400 uppercase flex items-center sticky left-0 bg-white z-20">장비</div>` +
     days.map(d=>{
       const dow=d.getDay();
       const dStr = fmtISO(d);
@@ -2062,7 +2082,7 @@ function renderTimeline(){
     }).join('');
   headerContainer.appendChild(header);
 
-  const totalContentWidth = 160 + CELL_W*days.length; // 160px = 좌측 장비명 칼럼(w-40)
+  const totalContentWidth = LABEL_W + CELL_W*days.length; // LABEL_W = 좌측 장비명 칼럼 너비 (화면폭에 따라 가변)
   document.getElementById('timeline-topscroll-inner').style.width = `${totalContentWidth}px`;
   setupTimelineScrollSync();
 
@@ -2080,7 +2100,8 @@ function renderTimeline(){
     row.style.minHeight='56px';
 
     const label = document.createElement('div');
-    label.className='w-40 shrink-0 p-2 flex items-center gap-2 bg-slate-50 sticky left-0 z-10';
+    label.className='shrink-0 p-2 flex items-center gap-2 bg-slate-50 sticky left-0 z-10';
+    label.style.width = `${LABEL_W}px`;
     label.innerHTML = `<span>${eq.icon}</span><span class="text-xs font-bold text-slate-700">${eq.name}</span>`;
     row.appendChild(label);
 
@@ -2190,12 +2211,12 @@ function renderTable(){
     const locked = isMasterSchedule(s);
     const statusBadge = s.status ? `<span class="ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold ${statusColors[s.status]||'bg-slate-100 text-slate-500'}">${s.status}</span>` : '';
     tr.innerHTML = `
-      <td class="px-5 py-4"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg ${getBarColorClass(s, eq)} flex items-center justify-center text-white font-bold text-xs">${(s.title||'?').charAt(0)}</div><span class="font-bold text-slate-800">${locked?'🔒 ':''}${s.title}</span>${statusBadge}</div></td>
-      <td class="px-5 py-4"><span class="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg text-xs font-bold">${eq?eq.icon:''} ${eq?eq.name:'-'}</span></td>
-      <td class="px-5 py-4 text-center text-sm font-semibold">${locked?'업무현황':(s.owner||'-')}</td>
-      <td class="px-5 py-4 text-center"><span class="bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-full text-xs font-bold">${s.duration}일</span></td>
-      <td class="px-5 py-4 text-right font-mono text-xs text-slate-500"><b>${s.startDate}</b> → ${fmtISO(end)}</td>
-      <td class="px-5 py-4 text-center" onclick="event.stopPropagation()">
+      <td class="px-3 py-3 sm:px-5 sm:py-4"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg ${getBarColorClass(s, eq)} flex items-center justify-center text-white font-bold text-xs">${(s.title||'?').charAt(0)}</div><span class="font-bold text-slate-800">${locked?'🔒 ':''}${s.title}</span>${statusBadge}</div></td>
+      <td class="px-3 py-3 sm:px-5 sm:py-4"><span class="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg text-xs font-bold">${eq?eq.icon:''} ${eq?eq.name:'-'}</span></td>
+      <td class="hidden sm:table-cell px-3 py-3 sm:px-5 sm:py-4 text-center text-sm font-semibold">${locked?'업무현황':(s.owner||'-')}</td>
+      <td class="hidden sm:table-cell px-3 py-3 sm:px-5 sm:py-4 text-center"><span class="bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-full text-xs font-bold">${s.duration}일</span></td>
+      <td class="px-3 py-3 sm:px-5 sm:py-4 text-right font-mono text-xs text-slate-500"><b>${s.startDate}</b> → ${fmtISO(end)}</td>
+      <td class="px-3 py-3 sm:px-5 sm:py-4 text-center" onclick="event.stopPropagation()">
         ${(!locked && canEdit()) ? `<button onclick="openScheduleModal('edit', ${JSON.stringify(s).replace(/"/g,'&quot;')})" class="text-slate-400 hover:text-indigo-600 mr-2">✏️</button><button onclick="requestDeleteSchedule('${s.id}')" class="text-slate-400 hover:text-rose-500">🗑️</button>` : `<span class="text-slate-300 text-xs">${locked?'🔒':'-'}</span>`}
       </td>`;
     tbody.appendChild(tr);
