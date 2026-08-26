@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 시험 스케줄 관리 시스템 V1.23.2 (자동연동 원본 시트를 시험계획누적으로 변경) -->
+<!-- 시험 스케줄 관리 시스템 V1.24.0 (자동계획 수립: 이전 입력값 기억 + 복수 장비 동시 계획) -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -79,7 +79,7 @@
       <div class="bg-indigo-600 p-3 rounded-2xl shadow-lg"><span class="text-white text-xl">🧪</span></div>
       <div>
         <h1 class="text-xl font-black text-slate-800">시험 스케줄 관리 시스템</h1>
-        <p class="text-[11px] text-indigo-500 font-bold uppercase tracking-wide">V1.23.2</p>
+        <p class="text-[11px] text-indigo-500 font-bold uppercase tracking-wide">V1.24.0</p>
       </div>
     </div>
     <div class="flex bg-slate-100 p-1 rounded-xl mb-6">
@@ -115,7 +115,7 @@
       <div class="bg-indigo-600 p-3 rounded-2xl shadow-lg"><span class="text-white text-2xl">🧪</span></div>
       <div>
         <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">시험 스케줄 관리 시스템
-          <span class="text-xs font-normal bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">V1.23.2</span>
+          <span class="text-xs font-normal bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">V1.24.0</span>
         </h1>
         <p class="text-sm text-indigo-500 font-medium">구글시트 연동 · 🔒 업무현황 자동반영</p>
       </div>
@@ -326,7 +326,8 @@
       <h3 class="text-lg font-bold text-slate-800">🤖 자동계획 수립 · 1/2</h3>
       <button onclick="closeModal('modal-auto1')" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
     </div>
-    <p class="text-xs text-slate-400 font-semibold mb-5">기본 정보를 입력하면, 다음 단계에서 빈 일정을 자동으로 찾아드립니다.</p>
+    <p class="text-xs text-slate-400 font-semibold mb-1">기본 정보를 입력하면, 다음 단계에서 빈 일정을 자동으로 찾아드립니다.</p>
+    <p class="text-[10px] text-indigo-400 font-bold mb-5">💾 마지막으로 입력했던 내용이 자동으로 채워집니다.</p>
     <div class="space-y-4">
       <div class="grid grid-cols-2 gap-3">
         <div><label class="field-label">차종</label><input id="auto-vehicle" class="field-input" placeholder="예: NQ5 PE"></div>
@@ -338,9 +339,12 @@
       </div>
       <div><label class="field-label">추가입력 (선택, 타이틀 뒤에 그대로 붙습니다)</label><input id="auto-desc" class="field-input" placeholder="예: 변경안 검증"></div>
     </div>
-    <div class="mt-7 flex justify-end gap-2">
-      <button onclick="closeModal('modal-auto1')" class="py-2.5 px-5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200">취소</button>
-      <button onclick="goToAutoSchedule2()" class="py-2.5 px-6 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700">다음</button>
+    <div class="mt-7 flex justify-between items-center gap-2">
+      <button onclick="clearAutoScheduleLastInput()" class="py-2.5 px-3 text-slate-400 text-[11px] font-bold hover:text-rose-500">이전 입력 지우기</button>
+      <div class="flex gap-2">
+        <button onclick="closeModal('modal-auto1')" class="py-2.5 px-5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200">취소</button>
+        <button onclick="goToAutoSchedule2()" class="py-2.5 px-6 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700">다음</button>
+      </div>
     </div>
   </div>
 </div>
@@ -359,11 +363,13 @@
         <input id="auto-start-date" type="date" class="field-input">
       </div>
       <div>
-        <label class="field-label">시험기명</label>
-        <select id="auto-target" class="field-input"></select>
+        <label class="field-label flex items-center justify-between">시험기명 (복수 선택 가능 — 같은 품목을 여러 장비에 한번에 계획할 때 체크)
+          <span class="normal-case font-bold text-indigo-500 cursor-pointer" onclick="toggleAllAutoTargets()">전체선택/해제</span>
+        </label>
+        <div id="auto-target-list" class="border border-slate-200 rounded-xl p-3 max-h-48 overflow-y-auto custom-scrollbar space-y-0.5 text-xs font-semibold text-slate-600 bg-slate-50"></div>
       </div>
       <div>
-        <label class="field-label">시험기간 (일)</label>
+        <label class="field-label">시험기간 (일) <span class="normal-case text-slate-400 font-semibold">— 선택한 모든 장비에 동일하게 적용됩니다</span></label>
         <input id="auto-duration" type="number" min="1" value="1" class="field-input">
       </div>
     </div>
@@ -371,13 +377,14 @@
 
     <div id="auto-result-box" class="hidden mt-5 bg-emerald-50 border border-emerald-100 rounded-xl p-4">
       <p id="auto-result-text" class="text-sm font-bold text-emerald-700 mb-3"></p>
+      <div id="auto-result-list" class="space-y-1.5 mb-3 max-h-40 overflow-y-auto custom-scrollbar"></div>
       <label class="flex items-center gap-2 text-[11px] font-bold text-slate-600 bg-white rounded-lg p-2.5 mb-3 cursor-pointer">
         <input type="checkbox" id="auto-push-appinput" class="w-4 h-4">
         🔗 시험계획표에도 반영
       </label>
       <div class="flex justify-end gap-2">
         <button onclick="resetAutoScheduleResult()" class="py-2 px-4 bg-white text-slate-600 border border-slate-200 font-bold text-xs rounded-lg hover:bg-slate-50">다시 찾기</button>
-        <button onclick="confirmAutoScheduleSave()" class="py-2 px-5 bg-emerald-500 text-white font-bold text-xs rounded-lg shadow hover:bg-emerald-600">이 자리로 등록</button>
+        <button onclick="confirmAutoScheduleSave()" class="py-2 px-5 bg-emerald-500 text-white font-bold text-xs rounded-lg shadow hover:bg-emerald-600">이 자리로 모두 등록</button>
       </div>
     </div>
     <p id="auto-result-error" class="hidden mt-4 text-xs text-rose-500 font-bold text-center"></p>
@@ -526,7 +533,7 @@
 
 <script>
 /* =====================================================================
-   시험 스케줄 관리 시스템 V1.23.2
+   시험 스케줄 관리 시스템 V1.24.0
    - 구글 Apps Script(GAS) 웹앱을 백엔드로 사용
    - 로그인/회원가입, 관리자-편집자-뷰어 권한, 캘린더/타임라인/테이블 뷰
 ===================================================================== */
@@ -551,8 +558,8 @@ let editingScheduleReadOnly = false;
 const equipments = [
   { id:'bg_1', name:'배광 1호', group:'배광UNIT', icon:'🎯' },
   { id:'bg_2', name:'배광 2호', group:'배광UNIT', icon:'🎯' },
-  { id:'ov_1', name:'오븐 1호', group:'고온UNIT', icon:'🌡️' },
-  { id:'ov_2', name:'오븐 2호', group:'고온UNIT', icon:'🌡️' },
+  { id:'ov_1', name:'오븐 1호', group:'고온UNIT', icon:'🔥' },
+  { id:'ov_2', name:'오븐 2호', group:'고온UNIT', icon:'🔥' },
   { id:'rm2_1', name:'2룸 1호', group:'고온UNIT', icon:'🌡️' },
   { id:'rm2_2', name:'2룸 2호', group:'고온UNIT', icon:'🌡️' },
   { id:'hm_1', name:'습기 1호', group:'습기UNIT', icon:'💧' },
@@ -566,10 +573,10 @@ const equipments = [
   { id:'env_6', name:'환경챔버/기타 6호', group:'환경UNIT', icon:'🌐' },
   { id:'env_7', name:'환경챔버/기타 7호', group:'환경UNIT', icon:'🌐' },
   { id:'env_8', name:'환경챔버/기타 8호', group:'환경UNIT', icon:'🌐' },
-  { id:'vib_1', name:'진동 1호', group:'가속UNIT', icon:'📳' },
-  { id:'acc_1', name:'장기내열 1호', group:'가속UNIT', icon:'🌡️' },
-  { id:'acc_2', name:'장기내열 2호', group:'가속UNIT', icon:'🌡️' },
-  { id:'scan_1', name:'스캐너 1호', group:'측정UNIT', icon:'📐' },
+  { id:'vib_1', name:'진동 1호', group:'가속UNIT', icon:'🔊' },
+  { id:'acc_1', name:'장기내열 1호', group:'가속UNIT', icon:'🚀' },
+  { id:'acc_2', name:'장기내열 2호', group:'가속UNIT', icon:'🚀' },
+  { id:'scan_1', name:'스캐너 1호', group:'측정UNIT', icon:'📡' },
   { id:'cmm_1', name:'CMM', group:'측정UNIT', icon:'📐' },
   { id:'shk_1', name:'충격 1호', group:'가속UNIT', icon:'🔨' },
   { id:'etc_1', name:'기타', group:'기타UNIT', icon:'🛠️' },
@@ -808,7 +815,8 @@ function isJigLimitedEquipment(eqId){
 }
 
 // schedule을 저장하기 전 검사. 이미 겹치는(날짜 겹침) 같은 차종+품목 일정이 2건 이상이면 충돌 목록 반환
-function findJigConflicts(schedule, excludeId){
+// extraSchedules: 아직 저장 전, 같은 배치(예: 자동계획 복수선택) 내에서 임시로 확보된 일정들도 함께 검사 (V1.24.0)
+function findJigConflicts(schedule, excludeId, extraSchedules){
   if (!isJigLimitedEquipment(schedule.eqId)) return null;
   const parsed = parseVehicleAndItem(schedule.title);
   if (!parsed) return null;
@@ -816,7 +824,8 @@ function findJigConflicts(schedule, excludeId){
   const start = new Date(schedule.startDate);
   const end = new Date(schedule.startDate); end.setDate(end.getDate()+dur-1);
 
-  const conflicts = schedules.filter(s=>{
+  const pool = (extraSchedules && extraSchedules.length) ? schedules.concat(extraSchedules) : schedules;
+  const conflicts = pool.filter(s=>{
     if (excludeId && s.id===excludeId) return false;
     if (s.status==='deleted') return false;
     if (!isJigLimitedEquipment(s.eqId)) return false;
@@ -857,13 +866,44 @@ function resolveJigConflict(allow){
 ============================================================ */
 const AUTO_GROUP_TARGETS = ['배광UNIT', '기타UNIT', '환경UNIT'];
 let autoScheduleState = {}; // 1단계에서 입력받은 차종/품목/사양/설명 임시 보관
-let autoScheduleResult = null; // 2단계 검색 결과 임시 보관
+let autoScheduleResult = null; // 2단계 검색 결과(배열) 임시 보관
+const LS_AUTO_LAST = 'tsm_auto_last_input'; // V1.24.0: 자동계획 수립 직전 입력값 기억
 
-function openAutoScheduleModal1(){
+/* ---------- 이전 입력값 기억 (V1.24.0) ---------- */
+function saveAutoScheduleLastInput(){
+  try{
+    const data = {
+      vehicle: document.getElementById('auto-vehicle').value,
+      item: document.getElementById('auto-item').value,
+      spec: document.getElementById('auto-spec').value,
+      desc: document.getElementById('auto-desc').value,
+      duration: document.getElementById('auto-duration') ? document.getElementById('auto-duration').value : 1,
+      targets: getSelectedAutoTargets().map(t=>t.raw)
+    };
+    localStorage.setItem(LS_AUTO_LAST, JSON.stringify(data));
+  }catch(e){ /* 저장 실패 시 조용히 무시 */ }
+}
+function loadAutoScheduleLastInput(){
+  try{
+    const raw = localStorage.getItem(LS_AUTO_LAST);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+function clearAutoScheduleLastInput(){
+  try{ localStorage.removeItem(LS_AUTO_LAST); }catch(e){}
   document.getElementById('auto-vehicle').value = '';
   document.getElementById('auto-item').value = '';
   document.getElementById('auto-spec').value = '';
   document.getElementById('auto-desc').value = '';
+  showToast('이전 입력이 초기화되었습니다.');
+}
+
+function openAutoScheduleModal1(){
+  const last = loadAutoScheduleLastInput();
+  document.getElementById('auto-vehicle').value = last ? (last.vehicle||'') : '';
+  document.getElementById('auto-item').value = last ? (last.item||'') : '';
+  document.getElementById('auto-spec').value = last ? (last.spec||'') : '';
+  document.getElementById('auto-desc').value = last ? (last.desc||'') : '';
   openModal('modal-auto1');
 }
 
@@ -879,18 +919,52 @@ function goToAutoSchedule2(){
   document.getElementById('auto2-summary').innerText = `[${vehicle}] ${item} ${autoScheduleState.spec} ${autoScheduleState.desc}`.trim();
   populateAutoTargetSelect();
   document.getElementById('auto-start-date').value = fmtISO(nextWeekdayNonHoliday(new Date()));
-  document.getElementById('auto-duration').value = 1;
+  const last = loadAutoScheduleLastInput();
+  document.getElementById('auto-duration').value = (last && last.duration) ? last.duration : 1;
+  if (last && last.targets && last.targets.length){
+    setSelectedAutoTargets(last.targets);
+  }
   resetAutoScheduleResult();
+  saveAutoScheduleLastInput(); // 1단계 입력 완료 시점에 저장
   closeModal('modal-auto1');
   openModal('modal-auto2');
 }
 
+// V1.24.0: 단일 select → 복수선택 체크박스 목록으로 변경 (동일 품목을 여러 장비에 한번에 계획)
 function populateAutoTargetSelect(){
-  const sel = document.getElementById('auto-target');
-  const groupOptions = AUTO_GROUP_TARGETS.map(g=>`<option value="group:${g}">🔀 ${g} (그룹, 가장 빠른 장비 자동선택)</option>`).join('');
+  const wrap = document.getElementById('auto-target-list');
+  const groupHtml = AUTO_GROUP_TARGETS.map(g=>
+    `<label class="flex items-center gap-2 py-1 px-1.5 rounded-lg hover:bg-white cursor-pointer"><input type="checkbox" class="auto-target-checkbox w-4 h-4" value="group:${g}">🔀 ${g} <span class="text-slate-400 font-normal">(그룹, 가장 빠른 장비 자동선택)</span></label>`
+  ).join('');
   const specificEq = equipments.filter(e=> e.id!=='holiday' && e.id!=='event'); // 그룹 대상 장비도 개별 선택 가능하도록 전체 포함
-  const specificOptions = specificEq.map(e=>`<option value="eq:${e.id}">${e.icon} ${e.name}</option>`).join('');
-  sel.innerHTML = `<optgroup label="그룹(자동선택)">${groupOptions}</optgroup><optgroup label="개별 장비">${specificOptions}</optgroup>`;
+  const eqHtml = specificEq.map(e=>
+    `<label class="flex items-center gap-2 py-1 px-1.5 rounded-lg hover:bg-white cursor-pointer"><input type="checkbox" class="auto-target-checkbox w-4 h-4" value="eq:${e.id}">${e.icon} ${e.name}</label>`
+  ).join('');
+  wrap.innerHTML =
+    `<p class="text-[10px] font-black text-slate-400 uppercase px-1.5">그룹(자동선택)</p>${groupHtml}` +
+    `<p class="text-[10px] font-black text-slate-400 uppercase px-1.5 mt-2">개별 장비</p>${eqHtml}`;
+}
+
+function getSelectedAutoTargets(){
+  return Array.from(document.querySelectorAll('.auto-target-checkbox:checked')).map(cb=>{
+    const [type, value] = cb.value.split(':');
+    return { type, value, raw: cb.value };
+  });
+}
+function setSelectedAutoTargets(values){
+  document.querySelectorAll('.auto-target-checkbox').forEach(cb=>{
+    cb.checked = values.includes(cb.value);
+  });
+}
+function toggleAllAutoTargets(){
+  const boxes = document.querySelectorAll('.auto-target-checkbox');
+  const allChecked = Array.from(boxes).every(cb=>cb.checked);
+  boxes.forEach(cb=> cb.checked = !allChecked);
+}
+function describeAutoTarget(t){
+  if (t.type==='group') return `🔀 ${t.value}`;
+  const eq = getEq(t.value);
+  return eq ? `${eq.icon} ${eq.name}` : t.value;
 }
 
 /* ---------- 날짜 유틸 (평일/공휴일 판정) ---------- */
@@ -904,8 +978,10 @@ function nextWeekdayNonHoliday(d){
 }
 
 /* ---------- 가용성 계산 ---------- */
-function isEquipmentFreeRange(eqId, startDate, endDate){
-  return !schedules.some(s=>{
+// extraSchedules: 아직 저장 전, 같은 배치 내에서 임시로 확보된 일정들도 함께 검사 (V1.24.0)
+function isEquipmentFreeRange(eqId, startDate, endDate, extraSchedules){
+  const pool = (extraSchedules && extraSchedules.length) ? schedules.concat(extraSchedules) : schedules;
+  return !pool.some(s=>{
     if (s.status==='deleted') return false;
     if (s.eqId!==eqId) return false;
     const sDur = parseInt(s.duration)||1;
@@ -933,7 +1009,8 @@ function computeEndDateForDuration(startDate, duration, skipNonWorkDays){
 }
 
 // 후보 시작일/대상으로부터 가장 빠른 배정 가능 자리를 찾음
-function findAutoScheduleSlot({ targetType, targetValue, startFrom, duration, title }){
+// extraSchedules: 같은 배치(복수 장비 동시 계획) 내에서 이미 확보된 자리들 (V1.24.0)
+function findAutoScheduleSlot({ targetType, targetValue, startFrom, duration, title, extraSchedules }){
   const HORIZON_ATTEMPTS = 180; // 평일 기준 약 9개월
   let candidate = nextWeekdayNonHoliday(new Date(startFrom));
   let attempts = 0;
@@ -948,10 +1025,10 @@ function findAutoScheduleSlot({ targetType, targetValue, startFrom, duration, ti
       if (!eq) continue;
       const skipNonWork = eq.group !== '환경UNIT';
       const endDate = computeEndDateForDuration(candidate, duration, skipNonWork);
-      if (isEquipmentFreeRange(eqId, candidate, endDate)){
+      if (isEquipmentFreeRange(eqId, candidate, endDate, extraSchedules)){
         const calDuration = Math.round((endDate-candidate)/86400000)+1;
         const candidateSchedule = { id:'__autoschedule_probe__', eqId, title, startDate: fmtISO(candidate), duration: calDuration };
-        const conflict = findJigConflicts(candidateSchedule, null);
+        const conflict = findJigConflicts(candidateSchedule, null, extraSchedules);
         if (!conflict){
           return { eqId, startDate: fmtISO(candidate), duration: calDuration, endDate: fmtISO(endDate), testDays: duration, skippedNonWorkDays: calDuration-duration };
         }
@@ -973,25 +1050,51 @@ function runAutoScheduleSearch(){
     document.getElementById('auto-start-date').value = fmtISO(adjusted);
   }
   const duration = parseInt(document.getElementById('auto-duration').value) || 1;
-  const targetRaw = document.getElementById('auto-target').value; // "group:배광UNIT" 또는 "eq:bg_1"
-  const [targetType, targetValue] = targetRaw.split(':');
-  const title = `[${autoScheduleState.vehicle}] ${autoScheduleState.item} ${autoScheduleState.spec} ${autoScheduleState.desc}`.trim();
-
-  const result = findAutoScheduleSlot({ targetType, targetValue, startFrom: adjusted, duration, title });
+  const targets = getSelectedAutoTargets(); // V1.24.0: 복수 선택 지원
   const errorEl = document.getElementById('auto-result-error');
   const boxEl = document.getElementById('auto-result-box');
-  if (!result){
+  if (targets.length===0){ showToast('시험기명을 1개 이상 선택해주세요.'); return; }
+
+  const title = `[${autoScheduleState.vehicle}] ${autoScheduleState.item} ${autoScheduleState.spec} ${autoScheduleState.desc}`.trim();
+
+  // 같은 배치 안에서는 이미 찾은 자리를 다음 대상 탐색 시 "사용 중"으로 간주해 서로 겹치지 않게 함
+  const batchProbe = [];
+  const results = [];
+  const failedLabels = [];
+  for (const t of targets){
+    const result = findAutoScheduleSlot({ targetType: t.type, targetValue: t.value, startFrom: adjusted, duration, title, extraSchedules: batchProbe });
+    if (result){
+      results.push({ ...result, title, targetLabel: describeAutoTarget(t) });
+      batchProbe.push({ id:`__batch_probe_${batchProbe.length}__`, eqId: result.eqId, title, startDate: result.startDate, duration: result.duration });
+    } else {
+      failedLabels.push(describeAutoTarget(t));
+    }
+  }
+
+  saveAutoScheduleLastInput(); // 실제 검색에 사용한 대상/기간을 다음 계획수립을 위해 저장
+
+  if (results.length===0){
     errorEl.innerText = '검색 범위(약 9개월) 내에서 빈 자리를 찾지 못했습니다. 조건을 조정해보세요.';
     errorEl.classList.remove('hidden');
     boxEl.classList.add('hidden');
     return;
   }
   errorEl.classList.add('hidden');
-  autoScheduleResult = { ...result, title };
-  const eq = getEq(result.eqId);
-  const extraNote = result.skippedNonWorkDays>0 ? ` (주말/공휴일 ${result.skippedNonWorkDays}일 제외하고 시험일 ${result.testDays}일 기준)` : '';
-  document.getElementById('auto-result-text').innerText = `${eq.icon} ${eq.name}에 ${result.startDate} ~ ${result.endDate}로 배정 가능합니다.${extraNote}`;
+  autoScheduleResult = results;
+  renderAutoScheduleResults(results, failedLabels);
   boxEl.classList.remove('hidden');
+}
+
+function renderAutoScheduleResults(results, failedLabels){
+  const summaryEl = document.getElementById('auto-result-text');
+  const failedNote = failedLabels.length ? `<br><span class="text-rose-500">⚠️ 빈 자리를 찾지 못함: ${failedLabels.join(', ')}</span>` : '';
+  summaryEl.innerHTML = `총 ${results.length}건의 빈 자리를 찾았습니다.${failedNote}`;
+
+  document.getElementById('auto-result-list').innerHTML = results.map(r=>{
+    const eq = getEq(r.eqId);
+    const extraNote = r.skippedNonWorkDays>0 ? ` (주말/공휴일 ${r.skippedNonWorkDays}일 제외, 시험일 ${r.testDays}일 기준)` : '';
+    return `<div class="bg-white rounded-lg p-2.5 text-[11px] font-bold text-emerald-700">${r.targetLabel} → ${eq?eq.icon:''} ${eq?eq.name:''}: ${r.startDate} ~ ${r.endDate}${extraNote}</div>`;
+  }).join('');
 }
 
 function resetAutoScheduleResult(){
@@ -1002,33 +1105,36 @@ function resetAutoScheduleResult(){
 }
 
 async function confirmAutoScheduleSave(){
-  if (!autoScheduleResult) return;
+  if (!autoScheduleResult || !autoScheduleResult.length) return;
   const pushToAppInput = document.getElementById('auto-push-appinput').checked;
-  const schedule = {
-    id: Date.now().toString(),
-    title: autoScheduleResult.title,
-    eqId: autoScheduleResult.eqId,
-    startDate: autoScheduleResult.startDate,
-    duration: autoScheduleResult.duration,
+  const schedulesToSave = autoScheduleResult.map((r,idx)=>({
+    id: `${Date.now()}_${idx}_${Math.random().toString(36).slice(2,7)}`,
+    title: r.title,
+    eqId: r.eqId,
+    startDate: r.startDate,
+    duration: r.duration,
     owner: '',
     desc: autoScheduleState.desc || '',
     status: 'active',
     createdBy: currentUser.username
-  };
+  }));
   closeModal('modal-auto2');
 
-  schedules.push({ ...schedule, progressStatus:'진행' });
+  schedulesToSave.forEach(schedule=> schedules.push({ ...schedule, progressStatus:'진행' }));
   renderCurrentView();
-  showToast('자동계획이 등록되었습니다.');
+  showToast(`자동계획 ${schedulesToSave.length}건이 등록되었습니다.`);
 
-  try {
-    const res = await gasPost('saveSchedule', { schedule });
-    if (res.status!=='success') throw new Error(res.message||'저장 실패');
-    if (pushToAppInput) pushScheduleToAppInput(schedule); // 완료를 기다리지 않고 백그라운드 진행
-  } catch(e){
-    schedules = schedules.filter(s=>s.id!==schedule.id);
-    renderCurrentView();
-    showToast('자동계획 저장에 실패했습니다. 다시 시도해주세요.');
+  for (const schedule of schedulesToSave){
+    try {
+      const res = await gasPost('saveSchedule', { schedule });
+      if (res.status!=='success') throw new Error(res.message||'저장 실패');
+      if (pushToAppInput) pushScheduleToAppInput(schedule); // 완료를 기다리지 않고 백그라운드 진행
+    } catch(e){
+      schedules = schedules.filter(s=>s.id!==schedule.id);
+      renderCurrentView();
+      const eq = getEq(schedule.eqId);
+      showToast(`${eq?eq.name:'일부'} 일정 저장에 실패했습니다. 다시 시도해주세요.`);
+    }
   }
 }
 
