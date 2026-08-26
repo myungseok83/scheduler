@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 시험 스케줄 관리 시스템 V1.24.1 (자동계획 수립: 장비별 개별 기간 지원 추가) -->
+<!-- 시험 스케줄 관리 시스템 V1.25.0 (마스터 반영 중복 정리 버튼 + 타임라인 가로스크롤바 두껍게) -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -13,6 +13,11 @@
   .custom-scrollbar::-webkit-scrollbar{width:6px;height:6px;}
   .custom-scrollbar::-webkit-scrollbar-track{background:#f1f5f9;}
   .custom-scrollbar::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:10px;}
+  /* 타임라인 뷰의 가로 스크롤바만 더 두껍게 (V1.25.0) — 세로 스크롤바 두께(width)는 건드리지 않음 */
+  .timeline-hscroll::-webkit-scrollbar{height:16px;}
+  .timeline-hscroll::-webkit-scrollbar-track{background:#f1f5f9;}
+  .timeline-hscroll::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:10px;border:3px solid #f1f5f9;background-clip:padding-box;}
+  .timeline-hscroll::-webkit-scrollbar-thumb:hover{background:#64748b;}
   /* 브라우저 주소창/북마크바 등을 감안해 vh% 대신 "화면높이-고정여백" 방식으로 계산 (V1.12.0) */
   .view-scroll-area{max-height:calc(100vh - 300px); min-height:160px;}
   .calendar-day-box{min-height:110px;background:#fff;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:6px;display:flex;flex-direction:column;gap:3px;}
@@ -79,7 +84,7 @@
       <div class="bg-indigo-600 p-3 rounded-2xl shadow-lg"><span class="text-white text-xl">🧪</span></div>
       <div>
         <h1 class="text-xl font-black text-slate-800">시험 스케줄 관리 시스템</h1>
-        <p class="text-[11px] text-indigo-500 font-bold uppercase tracking-wide">V1.24.1</p>
+        <p class="text-[11px] text-indigo-500 font-bold uppercase tracking-wide">V1.25.0</p>
       </div>
     </div>
     <div class="flex bg-slate-100 p-1 rounded-xl mb-6">
@@ -115,7 +120,7 @@
       <div class="bg-indigo-600 p-3 rounded-2xl shadow-lg"><span class="text-white text-2xl">🧪</span></div>
       <div>
         <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">시험 스케줄 관리 시스템
-          <span class="text-xs font-normal bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">V1.24.1</span>
+          <span class="text-xs font-normal bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">V1.25.0</span>
         </h1>
         <p class="text-sm text-indigo-500 font-medium">구글시트 연동 · 🔒 업무현황 자동반영</p>
       </div>
@@ -160,6 +165,7 @@
       </div>
       <div class="border-t border-slate-100 pt-4 space-y-2">
         <button id="btn-auto-schedule" onclick="openAutoScheduleModal1()" class="hidden w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs py-2.5 rounded-xl transition-all">🤖 자동계획 수립</button>
+        <button id="btn-dedupe-master" onclick="openDedupeMasterModal()" class="hidden w-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs py-2.5 rounded-xl transition-all">🧹 마스터 반영 중복 정리</button>
         <button onclick="openMemoModal()" class="w-full bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-bold text-xs py-2.5 rounded-xl transition-all">📝 메모 / 회의록</button>
       </div>
     </aside>
@@ -203,8 +209,8 @@
       <p class="text-[11px] text-slate-400 font-semibold">칸을 클릭하면 해당 장비/날짜로 일정을 바로 등록할 수 있어요 (편집 권한 필요)</p>
     </div>
     <div class="border border-slate-200 rounded-2xl overflow-hidden">
-      <!-- 상단 가로 스크롤바 (본문이 길어도 위에서 바로 좌우 이동 가능) -->
-      <div id="timeline-topscroll" class="overflow-x-auto overflow-y-hidden custom-scrollbar" style="height:14px;">
+      <!-- 상단 가로 스크롤바 (본문이 길어도 위에서 바로 좌우 이동 가능) — V1.25.0: 잡기 쉽도록 더 두껍게 -->
+      <div id="timeline-topscroll" class="overflow-x-auto overflow-y-hidden timeline-hscroll" style="height:18px;">
         <div id="timeline-topscroll-inner" style="height:1px;"></div>
       </div>
       <!-- 날짜 헤더 (세로 스크롤과 분리되어 항상 고정 표시, 가로 스크롤만 본문과 동기화) -->
@@ -212,7 +218,7 @@
         <div id="timeline-header-inner" class="min-w-max"></div>
       </div>
       <!-- 본문: 장비별 일정 (가로+세로 스크롤) -->
-      <div id="timeline-scroll-wrap" class="view-scroll-area overflow-auto custom-scrollbar">
+      <div id="timeline-scroll-wrap" class="view-scroll-area overflow-auto timeline-hscroll custom-scrollbar"
         <div id="timeline-body" class="min-w-max"></div>
       </div>
     </div>
@@ -393,6 +399,26 @@
   </div>
 </div>
 
+<!-- ===================== 모달: 마스터 반영 중복 정리 (V1.25.0) ===================== -->
+<div id="modal-dedupe" class="modal-overlay">
+  <div class="glass-card bg-white w-full max-w-lg rounded-[32px] p-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
+    <div class="flex justify-between items-start mb-1">
+      <h3 class="text-lg font-bold text-slate-800">🧹 마스터 반영 중복 정리</h3>
+      <button onclick="closeModal('modal-dedupe')" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+    </div>
+    <p class="text-xs text-slate-400 font-semibold mb-5">🔒 원본시트에서 자동으로 반영된 항목과 <b>장비·시작일·기간·제목이 모두 동일한</b> 앱 등록 항목을 찾습니다. 체크한 항목만 앱에서 삭제되며, 🔒 원본시트 쪽 기록은 그대로 유지됩니다.</p>
+    <div id="dedupe-empty" class="hidden text-center text-xs text-slate-400 font-semibold py-8">중복된 항목이 없습니다. 👍</div>
+    <div id="dedupe-list" class="space-y-2 mb-5"></div>
+    <div id="dedupe-actions" class="hidden flex justify-between items-center">
+      <span class="text-[11px] font-bold text-indigo-500 cursor-pointer" onclick="toggleAllDedupeItems()">전체선택/해제</span>
+      <div class="flex gap-2">
+        <button onclick="closeModal('modal-dedupe')" class="py-2.5 px-5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200">닫기</button>
+        <button onclick="deleteSelectedDedupeItems()" class="py-2.5 px-6 bg-rose-500 text-white font-bold rounded-xl shadow-lg hover:bg-rose-600">선택 항목 삭제</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ===================== 모달: 메모 / 회의록 ===================== -->
 <div id="modal-memo" class="modal-overlay">
   <div class="glass-card bg-white w-full max-w-lg rounded-[32px] p-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
@@ -535,7 +561,7 @@
 
 <script>
 /* =====================================================================
-   시험 스케줄 관리 시스템 V1.24.1
+   시험 스케줄 관리 시스템 V1.25.0
    - 구글 Apps Script(GAS) 웹앱을 백엔드로 사용
    - 로그인/회원가입, 관리자-편집자-뷰어 권한, 캘린더/타임라인/테이블 뷰
 ===================================================================== */
@@ -817,7 +843,7 @@ function isJigLimitedEquipment(eqId){
 }
 
 // schedule을 저장하기 전 검사. 이미 겹치는(날짜 겹침) 같은 차종+품목 일정이 2건 이상이면 충돌 목록 반환
-// extraSchedules: 아직 저장 전, 같은 배치(예: 자동계획 복수선택) 내에서 임시로 확보된 일정들도 함께 검사 (V1.24.1)
+// extraSchedules: 아직 저장 전, 같은 배치(예: 자동계획 복수선택) 내에서 임시로 확보된 일정들도 함께 검사 (V1.25.0)
 function findJigConflicts(schedule, excludeId, extraSchedules){
   if (!isJigLimitedEquipment(schedule.eqId)) return null;
   const parsed = parseVehicleAndItem(schedule.title);
@@ -869,17 +895,19 @@ function resolveJigConflict(allow){
 const AUTO_GROUP_TARGETS = ['배광UNIT', '기타UNIT', '환경UNIT'];
 let autoScheduleState = {}; // 1단계에서 입력받은 차종/품목/사양/설명 임시 보관
 let autoScheduleResult = null; // 2단계 검색 결과(배열) 임시 보관
-const LS_AUTO_LAST = 'tsm_auto_last_input'; // V1.24.1: 자동계획 수립 직전 입력값 기억
+const LS_AUTO_LAST = 'tsm_auto_last_input'; // V1.25.0: 자동계획 수립 직전 입력값 기억
 
-/* ---------- 이전 입력값 기억 (V1.24.1) ---------- */
+/* ---------- 이전 입력값 기억 (V1.25.0, 계획수립시작일 포함 V1.25.0) ---------- */
 function saveAutoScheduleLastInput(){
   try{
+    const startDateEl = document.getElementById('auto-start-date');
     const data = {
       vehicle: document.getElementById('auto-vehicle').value,
       item: document.getElementById('auto-item').value,
       spec: document.getElementById('auto-spec').value,
       desc: document.getElementById('auto-desc').value,
-      // targets: 장비별로 기간이 다를 수 있어 각 항목의 기간(duration)도 함께 저장 (V1.24.1)
+      startDate: startDateEl ? startDateEl.value : '',
+      // targets: 장비별로 기간이 다를 수 있어 각 항목의 기간(duration)도 함께 저장 (V1.25.0)
       targets: getSelectedAutoTargets().map(t=>({ raw: t.raw, duration: t.duration }))
     };
     localStorage.setItem(LS_AUTO_LAST, JSON.stringify(data));
@@ -923,6 +951,10 @@ function goToAutoSchedule2(){
   document.getElementById('auto-start-date').value = fmtISO(nextWeekdayNonHoliday(new Date()));
   document.getElementById('auto-duration-bulk').value = 1;
   const last = loadAutoScheduleLastInput();
+  // 기억해둔 계획수립시작일이 오늘 이후(미래)라면 그대로 채워주고, 이미 지난 날짜면 무의미하므로 기본값(오늘 이후 첫 평일) 유지
+  if (last && last.startDate && last.startDate >= fmtISO(new Date())){
+    document.getElementById('auto-start-date').value = last.startDate;
+  }
   if (last && last.targets && last.targets.length){
     setSelectedAutoTargets(last.targets);
   }
@@ -932,8 +964,8 @@ function goToAutoSchedule2(){
   openModal('modal-auto2');
 }
 
-// V1.24.1: 단일 select → 복수선택 체크박스 목록으로 변경 (동일 품목을 여러 장비에 한번에 계획)
-// V1.24.1: 장비마다 시험기간이 다를 수 있어, 각 행에 개별 기간(일) 입력을 추가
+// V1.25.0: 단일 select → 복수선택 체크박스 목록으로 변경 (동일 품목을 여러 장비에 한번에 계획)
+// V1.25.0: 장비마다 시험기간이 다를 수 있어, 각 행에 개별 기간(일) 입력을 추가
 function autoTargetRowHtml(value, label, note){
   return `<div class="flex items-center gap-2 py-1 px-1.5 rounded-lg hover:bg-white">
     <label class="flex items-center gap-2 flex-1 cursor-pointer min-w-0">
@@ -1003,7 +1035,7 @@ function nextWeekdayNonHoliday(d){
 }
 
 /* ---------- 가용성 계산 ---------- */
-// extraSchedules: 아직 저장 전, 같은 배치 내에서 임시로 확보된 일정들도 함께 검사 (V1.24.1)
+// extraSchedules: 아직 저장 전, 같은 배치 내에서 임시로 확보된 일정들도 함께 검사 (V1.25.0)
 function isEquipmentFreeRange(eqId, startDate, endDate, extraSchedules){
   const pool = (extraSchedules && extraSchedules.length) ? schedules.concat(extraSchedules) : schedules;
   return !pool.some(s=>{
@@ -1034,7 +1066,7 @@ function computeEndDateForDuration(startDate, duration, skipNonWorkDays){
 }
 
 // 후보 시작일/대상으로부터 가장 빠른 배정 가능 자리를 찾음
-// extraSchedules: 같은 배치(복수 장비 동시 계획) 내에서 이미 확보된 자리들 (V1.24.1)
+// extraSchedules: 같은 배치(복수 장비 동시 계획) 내에서 이미 확보된 자리들 (V1.25.0)
 function findAutoScheduleSlot({ targetType, targetValue, startFrom, duration, title, extraSchedules }){
   const HORIZON_ATTEMPTS = 180; // 평일 기준 약 9개월
   let candidate = nextWeekdayNonHoliday(new Date(startFrom));
@@ -1074,7 +1106,7 @@ function runAutoScheduleSearch(){
     showToast(`계획수립시작일은 평일만 가능해 ${fmtISO(adjusted)}로 보정했습니다.`);
     document.getElementById('auto-start-date').value = fmtISO(adjusted);
   }
-  const targets = getSelectedAutoTargets(); // V1.24.1: 복수 선택 지원, 각 항목별 duration 포함 (V1.24.1)
+  const targets = getSelectedAutoTargets(); // V1.25.0: 복수 선택 지원, 각 항목별 duration 포함 (V1.25.0)
   const errorEl = document.getElementById('auto-result-error');
   const boxEl = document.getElementById('auto-result-box');
   if (targets.length===0){ showToast('시험기명을 1개 이상 선택해주세요.'); return; }
@@ -1444,6 +1476,7 @@ function renderUserBadge(){
   document.getElementById('btn-holiday-calendar').classList.toggle('hidden', !canEdit());
   document.getElementById('btn-holiday-timeline').classList.toggle('hidden', !canEdit());
   document.getElementById('btn-auto-schedule').classList.toggle('hidden', !canEdit());
+  document.getElementById('btn-dedupe-master').classList.toggle('hidden', !canEdit());
 }
 
 /* ---------------------- 데이터 로드 ---------------------- */
@@ -2302,6 +2335,94 @@ async function requestDeleteSchedule(id){
     if (removed) schedules.push(removed); // 실패 시 되돌림
     renderCurrentView();
     showToast('삭제에 실패했습니다. 다시 시도해주세요.');
+  }
+}
+
+/* ============================================================
+   마스터 반영 중복 정리 (V1.25.0)
+   - 🔒 원본시트(시험계획누적) 자동연동 항목과 장비/시작일/기간/제목이 모두 같은
+     앱 등록(수동) 항목을 찾아, 선택한 것만 앱에서 삭제 (원본시트 쪽은 그대로 유지)
+============================================================ */
+function findDuplicateAppSchedules(){
+  const masters = schedules.filter(s=> isMasterSchedule(s) && s.status!=='deleted');
+  const manuals = schedules.filter(s=> !isMasterSchedule(s) && s.status!=='deleted' && s.eqId!=='holiday' && s.eqId!=='event');
+  const dups = [];
+  manuals.forEach(m=>{
+    const norm = v => String(v||'').trim();
+    const match = masters.find(mm=>
+      mm.eqId===m.eqId &&
+      norm(mm.startDate)===norm(m.startDate) &&
+      (parseInt(mm.duration)||1)===(parseInt(m.duration)||1) &&
+      norm(mm.title)===norm(m.title)
+    );
+    if (match) dups.push({ manual: m, master: match });
+  });
+  return dups;
+}
+
+function openDedupeMasterModal(){
+  const dups = findDuplicateAppSchedules();
+  const emptyEl = document.getElementById('dedupe-empty');
+  const listEl = document.getElementById('dedupe-list');
+  const actionsEl = document.getElementById('dedupe-actions');
+
+  if (dups.length===0){
+    emptyEl.classList.remove('hidden');
+    listEl.innerHTML = '';
+    actionsEl.classList.add('hidden');
+  } else {
+    emptyEl.classList.add('hidden');
+    actionsEl.classList.remove('hidden');
+    listEl.innerHTML = dups.map(d=>{
+      const eq = getEq(d.manual.eqId);
+      return `<label class="flex items-start gap-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl p-3 cursor-pointer">
+        <input type="checkbox" class="dedupe-item-checkbox w-4 h-4 mt-0.5 shrink-0" checked value="${d.manual.id}">
+        <span class="text-xs">
+          <span class="font-bold text-slate-700">${eq?eq.icon:''} ${eq?eq.name:''} · ${d.manual.startDate} (${d.manual.duration}일)</span><br>
+          <span class="text-slate-500">${d.manual.title}</span><br>
+          <span class="text-[10px] text-rose-400 font-bold">🔒 원본시트 자동연동 항목과 일치 — 이 앱 등록분만 삭제됩니다</span>
+        </span>
+      </label>`;
+    }).join('');
+  }
+  openModal('modal-dedupe');
+}
+
+function toggleAllDedupeItems(){
+  const boxes = document.querySelectorAll('.dedupe-item-checkbox');
+  const allChecked = Array.from(boxes).every(cb=>cb.checked);
+  boxes.forEach(cb=> cb.checked = !allChecked);
+}
+
+async function deleteSelectedDedupeItems(){
+  const ids = Array.from(document.querySelectorAll('.dedupe-item-checkbox:checked')).map(cb=>cb.value);
+  if (ids.length===0){ showToast('삭제할 항목을 선택해주세요.'); return; }
+  if (!confirm(`선택한 ${ids.length}건을 앱에서 삭제하시겠습니까? (🔒 원본시트 기록은 유지됩니다)`)) return;
+  closeModal('modal-dedupe');
+
+  const removed = ids.map(id=> schedules.find(s=>s.id===id)).filter(Boolean);
+  schedules = schedules.filter(s=> ids.indexOf(s.id)===-1);
+  renderCurrentView();
+
+  let successCount = 0;
+  const failedIds = [];
+  for (const id of ids){
+    try {
+      const res = await gasPost('deleteSchedule', { id });
+      if (res.status!=='success') throw new Error(res.message||'삭제 실패');
+      successCount++;
+    } catch(e){
+      failedIds.push(id);
+    }
+  }
+
+  if (failedIds.length>0){
+    // 실패한 것만 되돌림
+    removed.filter(s=> failedIds.indexOf(s.id)>-1).forEach(s=> schedules.push(s));
+    renderCurrentView();
+    showToast(`${successCount}건 삭제 완료, ${failedIds.length}건은 실패했습니다.`);
+  } else {
+    showToast(`중복 항목 ${successCount}건이 삭제되었습니다.`);
   }
 }
 
