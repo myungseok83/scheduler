@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 시험 스케줄 관리 시스템 V1.24.0 (자동계획 수립: 이전 입력값 기억 + 복수 장비 동시 계획) -->
+<!-- 시험 스케줄 관리 시스템 V1.24.1 (자동계획 수립: 장비별 개별 기간 지원 추가) -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -79,7 +79,7 @@
       <div class="bg-indigo-600 p-3 rounded-2xl shadow-lg"><span class="text-white text-xl">🧪</span></div>
       <div>
         <h1 class="text-xl font-black text-slate-800">시험 스케줄 관리 시스템</h1>
-        <p class="text-[11px] text-indigo-500 font-bold uppercase tracking-wide">V1.24.0</p>
+        <p class="text-[11px] text-indigo-500 font-bold uppercase tracking-wide">V1.24.1</p>
       </div>
     </div>
     <div class="flex bg-slate-100 p-1 rounded-xl mb-6">
@@ -115,7 +115,7 @@
       <div class="bg-indigo-600 p-3 rounded-2xl shadow-lg"><span class="text-white text-2xl">🧪</span></div>
       <div>
         <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">시험 스케줄 관리 시스템
-          <span class="text-xs font-normal bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">V1.24.0</span>
+          <span class="text-xs font-normal bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">V1.24.1</span>
         </h1>
         <p class="text-sm text-indigo-500 font-medium">구글시트 연동 · 🔒 업무현황 자동반영</p>
       </div>
@@ -363,14 +363,16 @@
         <input id="auto-start-date" type="date" class="field-input">
       </div>
       <div>
-        <label class="field-label flex items-center justify-between">시험기명 (복수 선택 가능 — 같은 품목을 여러 장비에 한번에 계획할 때 체크)
+        <label class="field-label flex items-center justify-between">시험기명 · 장비별 시험기간(일) (복수 선택 가능)
           <span class="normal-case font-bold text-indigo-500 cursor-pointer" onclick="toggleAllAutoTargets()">전체선택/해제</span>
         </label>
-        <div id="auto-target-list" class="border border-slate-200 rounded-xl p-3 max-h-48 overflow-y-auto custom-scrollbar space-y-0.5 text-xs font-semibold text-slate-600 bg-slate-50"></div>
-      </div>
-      <div>
-        <label class="field-label">시험기간 (일) <span class="normal-case text-slate-400 font-semibold">— 선택한 모든 장비에 동일하게 적용됩니다</span></label>
-        <input id="auto-duration" type="number" min="1" value="1" class="field-input">
+        <p class="text-[10px] text-slate-400 font-semibold mb-1.5">체크한 장비마다 기간을 각각 다르게 지정할 수 있습니다.</p>
+        <div class="flex items-center gap-2 mb-2 bg-slate-50 rounded-lg p-2">
+          <span class="text-[10px] text-slate-500 font-bold whitespace-nowrap">선택된 항목에 기간 일괄 적용</span>
+          <input id="auto-duration-bulk" type="number" min="1" value="1" class="field-input !py-1 !px-2 !w-16 text-center text-xs">
+          <button type="button" onclick="applyBulkAutoDuration()" class="text-[11px] font-bold text-indigo-600 hover:underline whitespace-nowrap">적용</button>
+        </div>
+        <div id="auto-target-list" class="border border-slate-200 rounded-xl p-3 max-h-56 overflow-y-auto custom-scrollbar space-y-0.5 text-xs font-semibold text-slate-600 bg-slate-50"></div>
       </div>
     </div>
     <button onclick="runAutoScheduleSearch()" class="w-full mt-5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all">🔍 빈 자리 찾기</button>
@@ -533,7 +535,7 @@
 
 <script>
 /* =====================================================================
-   시험 스케줄 관리 시스템 V1.24.0
+   시험 스케줄 관리 시스템 V1.24.1
    - 구글 Apps Script(GAS) 웹앱을 백엔드로 사용
    - 로그인/회원가입, 관리자-편집자-뷰어 권한, 캘린더/타임라인/테이블 뷰
 ===================================================================== */
@@ -815,7 +817,7 @@ function isJigLimitedEquipment(eqId){
 }
 
 // schedule을 저장하기 전 검사. 이미 겹치는(날짜 겹침) 같은 차종+품목 일정이 2건 이상이면 충돌 목록 반환
-// extraSchedules: 아직 저장 전, 같은 배치(예: 자동계획 복수선택) 내에서 임시로 확보된 일정들도 함께 검사 (V1.24.0)
+// extraSchedules: 아직 저장 전, 같은 배치(예: 자동계획 복수선택) 내에서 임시로 확보된 일정들도 함께 검사 (V1.24.1)
 function findJigConflicts(schedule, excludeId, extraSchedules){
   if (!isJigLimitedEquipment(schedule.eqId)) return null;
   const parsed = parseVehicleAndItem(schedule.title);
@@ -867,9 +869,9 @@ function resolveJigConflict(allow){
 const AUTO_GROUP_TARGETS = ['배광UNIT', '기타UNIT', '환경UNIT'];
 let autoScheduleState = {}; // 1단계에서 입력받은 차종/품목/사양/설명 임시 보관
 let autoScheduleResult = null; // 2단계 검색 결과(배열) 임시 보관
-const LS_AUTO_LAST = 'tsm_auto_last_input'; // V1.24.0: 자동계획 수립 직전 입력값 기억
+const LS_AUTO_LAST = 'tsm_auto_last_input'; // V1.24.1: 자동계획 수립 직전 입력값 기억
 
-/* ---------- 이전 입력값 기억 (V1.24.0) ---------- */
+/* ---------- 이전 입력값 기억 (V1.24.1) ---------- */
 function saveAutoScheduleLastInput(){
   try{
     const data = {
@@ -877,8 +879,8 @@ function saveAutoScheduleLastInput(){
       item: document.getElementById('auto-item').value,
       spec: document.getElementById('auto-spec').value,
       desc: document.getElementById('auto-desc').value,
-      duration: document.getElementById('auto-duration') ? document.getElementById('auto-duration').value : 1,
-      targets: getSelectedAutoTargets().map(t=>t.raw)
+      // targets: 장비별로 기간이 다를 수 있어 각 항목의 기간(duration)도 함께 저장 (V1.24.1)
+      targets: getSelectedAutoTargets().map(t=>({ raw: t.raw, duration: t.duration }))
     };
     localStorage.setItem(LS_AUTO_LAST, JSON.stringify(data));
   }catch(e){ /* 저장 실패 시 조용히 무시 */ }
@@ -919,8 +921,8 @@ function goToAutoSchedule2(){
   document.getElementById('auto2-summary').innerText = `[${vehicle}] ${item} ${autoScheduleState.spec} ${autoScheduleState.desc}`.trim();
   populateAutoTargetSelect();
   document.getElementById('auto-start-date').value = fmtISO(nextWeekdayNonHoliday(new Date()));
+  document.getElementById('auto-duration-bulk').value = 1;
   const last = loadAutoScheduleLastInput();
-  document.getElementById('auto-duration').value = (last && last.duration) ? last.duration : 1;
   if (last && last.targets && last.targets.length){
     setSelectedAutoTargets(last.targets);
   }
@@ -930,16 +932,24 @@ function goToAutoSchedule2(){
   openModal('modal-auto2');
 }
 
-// V1.24.0: 단일 select → 복수선택 체크박스 목록으로 변경 (동일 품목을 여러 장비에 한번에 계획)
+// V1.24.1: 단일 select → 복수선택 체크박스 목록으로 변경 (동일 품목을 여러 장비에 한번에 계획)
+// V1.24.1: 장비마다 시험기간이 다를 수 있어, 각 행에 개별 기간(일) 입력을 추가
+function autoTargetRowHtml(value, label, note){
+  return `<div class="flex items-center gap-2 py-1 px-1.5 rounded-lg hover:bg-white">
+    <label class="flex items-center gap-2 flex-1 cursor-pointer min-w-0">
+      <input type="checkbox" class="auto-target-checkbox w-4 h-4 shrink-0" value="${value}">
+      <span class="truncate">${label}${note?` <span class="text-slate-400 font-normal">${note}</span>`:''}</span>
+    </label>
+    <input type="number" min="1" value="1" class="auto-target-duration field-input !w-14 !py-1 !px-1.5 text-center text-xs shrink-0" title="이 항목의 시험기간(일)">
+  </div>`;
+}
 function populateAutoTargetSelect(){
   const wrap = document.getElementById('auto-target-list');
   const groupHtml = AUTO_GROUP_TARGETS.map(g=>
-    `<label class="flex items-center gap-2 py-1 px-1.5 rounded-lg hover:bg-white cursor-pointer"><input type="checkbox" class="auto-target-checkbox w-4 h-4" value="group:${g}">🔀 ${g} <span class="text-slate-400 font-normal">(그룹, 가장 빠른 장비 자동선택)</span></label>`
+    autoTargetRowHtml(`group:${g}`, `🔀 ${g}`, '(그룹, 가장 빠른 장비 자동선택)')
   ).join('');
   const specificEq = equipments.filter(e=> e.id!=='holiday' && e.id!=='event'); // 그룹 대상 장비도 개별 선택 가능하도록 전체 포함
-  const eqHtml = specificEq.map(e=>
-    `<label class="flex items-center gap-2 py-1 px-1.5 rounded-lg hover:bg-white cursor-pointer"><input type="checkbox" class="auto-target-checkbox w-4 h-4" value="eq:${e.id}">${e.icon} ${e.name}</label>`
-  ).join('');
+  const eqHtml = specificEq.map(e=> autoTargetRowHtml(`eq:${e.id}`, `${e.icon} ${e.name}`, '')).join('');
   wrap.innerHTML =
     `<p class="text-[10px] font-black text-slate-400 uppercase px-1.5">그룹(자동선택)</p>${groupHtml}` +
     `<p class="text-[10px] font-black text-slate-400 uppercase px-1.5 mt-2">개별 장비</p>${eqHtml}`;
@@ -948,12 +958,20 @@ function populateAutoTargetSelect(){
 function getSelectedAutoTargets(){
   return Array.from(document.querySelectorAll('.auto-target-checkbox:checked')).map(cb=>{
     const [type, value] = cb.value.split(':');
-    return { type, value, raw: cb.value };
+    const durInput = cb.closest('div').querySelector('.auto-target-duration');
+    const duration = parseInt(durInput ? durInput.value : 1) || 1;
+    return { type, value, raw: cb.value, duration };
   });
 }
+// values: [{raw, duration}, ...] (구버전 문자열 배열도 하위호환으로 지원)
 function setSelectedAutoTargets(values){
   document.querySelectorAll('.auto-target-checkbox').forEach(cb=>{
-    cb.checked = values.includes(cb.value);
+    const match = values.find(v => (typeof v === 'string' ? v : v.raw) === cb.value);
+    cb.checked = !!match;
+    if (match){
+      const durInput = cb.closest('div').querySelector('.auto-target-duration');
+      if (durInput) durInput.value = (typeof match === 'object' && match.duration) ? match.duration : 1;
+    }
   });
 }
 function toggleAllAutoTargets(){
@@ -961,10 +979,17 @@ function toggleAllAutoTargets(){
   const allChecked = Array.from(boxes).every(cb=>cb.checked);
   boxes.forEach(cb=> cb.checked = !allChecked);
 }
+// 체크된 항목들에 한해 기간을 일괄 지정 (개별 조정은 그대로 각 행에서 가능)
+function applyBulkAutoDuration(){
+  const val = parseInt(document.getElementById('auto-duration-bulk').value) || 1;
+  document.querySelectorAll('.auto-target-checkbox:checked').forEach(cb=>{
+    const durInput = cb.closest('div').querySelector('.auto-target-duration');
+    if (durInput) durInput.value = val;
+  });
+}
 function describeAutoTarget(t){
-  if (t.type==='group') return `🔀 ${t.value}`;
-  const eq = getEq(t.value);
-  return eq ? `${eq.icon} ${eq.name}` : t.value;
+  const base = t.type==='group' ? `🔀 ${t.value}` : (getEq(t.value) ? `${getEq(t.value).icon} ${getEq(t.value).name}` : t.value);
+  return t.duration ? `${base}(${t.duration}일)` : base;
 }
 
 /* ---------- 날짜 유틸 (평일/공휴일 판정) ---------- */
@@ -978,7 +1003,7 @@ function nextWeekdayNonHoliday(d){
 }
 
 /* ---------- 가용성 계산 ---------- */
-// extraSchedules: 아직 저장 전, 같은 배치 내에서 임시로 확보된 일정들도 함께 검사 (V1.24.0)
+// extraSchedules: 아직 저장 전, 같은 배치 내에서 임시로 확보된 일정들도 함께 검사 (V1.24.1)
 function isEquipmentFreeRange(eqId, startDate, endDate, extraSchedules){
   const pool = (extraSchedules && extraSchedules.length) ? schedules.concat(extraSchedules) : schedules;
   return !pool.some(s=>{
@@ -1009,7 +1034,7 @@ function computeEndDateForDuration(startDate, duration, skipNonWorkDays){
 }
 
 // 후보 시작일/대상으로부터 가장 빠른 배정 가능 자리를 찾음
-// extraSchedules: 같은 배치(복수 장비 동시 계획) 내에서 이미 확보된 자리들 (V1.24.0)
+// extraSchedules: 같은 배치(복수 장비 동시 계획) 내에서 이미 확보된 자리들 (V1.24.1)
 function findAutoScheduleSlot({ targetType, targetValue, startFrom, duration, title, extraSchedules }){
   const HORIZON_ATTEMPTS = 180; // 평일 기준 약 9개월
   let candidate = nextWeekdayNonHoliday(new Date(startFrom));
@@ -1049,8 +1074,7 @@ function runAutoScheduleSearch(){
     showToast(`계획수립시작일은 평일만 가능해 ${fmtISO(adjusted)}로 보정했습니다.`);
     document.getElementById('auto-start-date').value = fmtISO(adjusted);
   }
-  const duration = parseInt(document.getElementById('auto-duration').value) || 1;
-  const targets = getSelectedAutoTargets(); // V1.24.0: 복수 선택 지원
+  const targets = getSelectedAutoTargets(); // V1.24.1: 복수 선택 지원, 각 항목별 duration 포함 (V1.24.1)
   const errorEl = document.getElementById('auto-result-error');
   const boxEl = document.getElementById('auto-result-box');
   if (targets.length===0){ showToast('시험기명을 1개 이상 선택해주세요.'); return; }
@@ -1062,7 +1086,7 @@ function runAutoScheduleSearch(){
   const results = [];
   const failedLabels = [];
   for (const t of targets){
-    const result = findAutoScheduleSlot({ targetType: t.type, targetValue: t.value, startFrom: adjusted, duration, title, extraSchedules: batchProbe });
+    const result = findAutoScheduleSlot({ targetType: t.type, targetValue: t.value, startFrom: adjusted, duration: t.duration, title, extraSchedules: batchProbe });
     if (result){
       results.push({ ...result, title, targetLabel: describeAutoTarget(t) });
       batchProbe.push({ id:`__batch_probe_${batchProbe.length}__`, eqId: result.eqId, title, startDate: result.startDate, duration: result.duration });
