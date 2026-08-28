@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 시험 스케줄 관리 시스템 V1.27.0 (관리자 외 회원: 자동계획 수립/마스터 반영 중복 정리/메모 회의록/휴일 등록 메뉴 숨김) (V1.27.0: 좌측 패널 근태 등록 추가 — 뷰어 권한자도 본인 근태 편집 가능, 캘린더/타임라인 배광1호 위에 근태 표시) -->
+<!-- 시험 스케줄 관리 시스템 V1.27.1 (관리자 외 회원: 자동계획 수립/마스터 반영 중복 정리/메모 회의록/휴일 등록 메뉴 숨김) (V1.27.0: 좌측 패널 근태 등록 추가 — 뷰어 권한자도 본인 근태 편집 가능, 캘린더/타임라인 배광1호 위에 근태 표시) (V1.27.1: 달의 마지막 날/주의 마지막 칸에 시작하는 일정이 타임라인·캘린더에서 안 보이던 타임존 버그 수정) -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -112,7 +112,7 @@
       <div class="bg-indigo-600 p-3 rounded-2xl shadow-lg"><span class="text-white text-xl">🧪</span></div>
       <div>
         <h1 class="text-xl font-black text-slate-800">시험 스케줄 관리 시스템</h1>
-        <p class="text-[11px] text-indigo-500 font-bold uppercase tracking-wide">V1.27.0</p>
+        <p class="text-[11px] text-indigo-500 font-bold uppercase tracking-wide">V1.27.1</p>
       </div>
     </div>
     <div class="flex bg-slate-100 p-1 rounded-xl mb-6">
@@ -148,7 +148,7 @@
       <div class="bg-indigo-600 p-3 rounded-2xl shadow-lg"><span class="text-white text-2xl">🧪</span></div>
       <div class="min-w-0">
         <h1 class="text-lg sm:text-2xl font-bold text-slate-800 flex items-center flex-wrap gap-2">시험 스케줄 관리 시스템
-          <span class="text-xs font-normal bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">V1.27.0</span>
+          <span class="text-xs font-normal bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">V1.27.1</span>
         </h1>
         <p class="text-xs sm:text-sm text-indigo-500 font-medium">구글시트 연동 · 🔒 업무현황 자동반영</p>
       </div>
@@ -658,7 +658,7 @@
 
 <script>
 /* =====================================================================
-   시험 스케줄 관리 시스템 V1.27.0
+   시험 스케줄 관리 시스템 V1.27.1
    - 구글 Apps Script(GAS) 웹앱을 백엔드로 사용
    - 로그인/회원가입, 관리자-편집자-뷰어 권한, 캘린더/타임라인/테이블 뷰
 ===================================================================== */
@@ -1784,6 +1784,16 @@ function getEq(id){ return equipments.find(e=>e.id===id); }
 function sameId(a,b){ return a!=null && b!=null && String(a)===String(b); }
 function fmtISO(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function todayStr(){ return fmtISO(new Date()); }
+// "YYYY-MM-DD" 문자열을 new Date(str)로 직접 파싱하면 UTC 자정으로 해석되어, 로컬시간(KST)으로 만든
+// 날짜 객체(new Date(y,m,d))와 비교할 때 9시간 어긋남이 생김 — 그 결과 달의 마지막 날/주의 마지막 칸에
+// 시작하는 일정이 "범위 밖"으로 잘못 판정되어 타임라인·캘린더에서 사라지는 문제가 있었음 (V1.27.1).
+// 항상 이 함수로 로컬 자정 기준 Date를 만들어 비교 대상 간 기준을 통일한다.
+function parseLocalDate(dateStr){
+  if (!dateStr) return new Date(NaN);
+  const m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return new Date(dateStr);
+  return new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10));
+}
 // 서버에서 온 날짜 값이 "2026-08-15T00:00:00.000Z" 같은 타임스탬프 형태여도 앞부분 날짜만 취해 통일 (V1.9.0)
 function normalizeDateStr(v){
   if (!v) return v;
@@ -2125,8 +2135,8 @@ function renderCalendar(){
       if (isHolidayOrEventType(s)) return false; // 휴일/이벤트는 날짜별로 개별 표시
       const dur = parseInt(s.duration)||1;
       if (dur<2) return false;
-      const sStart = new Date(s.startDate);
-      const sEnd = new Date(s.startDate); sEnd.setDate(sEnd.getDate()+dur-1);
+      const sStart = parseLocalDate(s.startDate);
+      const sEnd = parseLocalDate(s.startDate); sEnd.setDate(sEnd.getDate()+dur-1);
       return !(sEnd < weekFirstDate || sStart > weekLastDate);
     }).sort((a,b)=>a.startDate.localeCompare(b.startDate));
 
@@ -2137,8 +2147,8 @@ function renderCalendar(){
     const overflowByCol = {}; // 레인 초과로 표시 못한 항목 수 (요일 컬럼별 집계, "+N건 더" 표시용)
     multiDay.forEach(s=>{
       const dur = parseInt(s.duration)||1;
-      const sStart = new Date(s.startDate);
-      const sEnd = new Date(s.startDate); sEnd.setDate(sEnd.getDate()+dur-1);
+      const sStart = parseLocalDate(s.startDate);
+      const sEnd = parseLocalDate(s.startDate); sEnd.setDate(sEnd.getDate()+dur-1);
       const dispStart = sStart < weekFirstDate ? weekFirstDate : sStart;
       const dispEnd = sEnd > weekLastDate ? weekLastDate : sEnd;
       let lane=0;
@@ -2643,8 +2653,8 @@ function renderTimeline(){
     let laneEnds = [];
     let maxLane = 0;
     eqSchedules.forEach(s=>{
-      const sStart = new Date(s.startDate);
-      const sEnd = new Date(s.startDate); sEnd.setDate(sEnd.getDate()+(parseInt(s.duration)||1)-1);
+      const sStart = parseLocalDate(s.startDate);
+      const sEnd = parseLocalDate(s.startDate); sEnd.setDate(sEnd.getDate()+(parseInt(s.duration)||1)-1);
       if (sEnd < winStart || sStart > winEnd) return;
       const dispStart = sStart < winStart ? winStart : sStart;
       const dispEnd = sEnd > winEnd ? winEnd : sEnd;
