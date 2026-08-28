@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 시험 스케줄 관리 시스템 V1.26.2 (관리자 외 회원: 자동계획 수립/마스터 반영 중복 정리/메모 회의록/휴일 등록 메뉴 숨김) -->
+<!-- 시험 스케줄 관리 시스템 V1.27.0 (관리자 외 회원: 자동계획 수립/마스터 반영 중복 정리/메모 회의록/휴일 등록 메뉴 숨김) (V1.27.0: 좌측 패널 근태 등록 추가 — 뷰어 권한자도 본인 근태 편집 가능, 캘린더/타임라인 배광1호 위에 근태 표시) -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -112,7 +112,7 @@
       <div class="bg-indigo-600 p-3 rounded-2xl shadow-lg"><span class="text-white text-xl">🧪</span></div>
       <div>
         <h1 class="text-xl font-black text-slate-800">시험 스케줄 관리 시스템</h1>
-        <p class="text-[11px] text-indigo-500 font-bold uppercase tracking-wide">V1.26.2</p>
+        <p class="text-[11px] text-indigo-500 font-bold uppercase tracking-wide">V1.27.0</p>
       </div>
     </div>
     <div class="flex bg-slate-100 p-1 rounded-xl mb-6">
@@ -148,7 +148,7 @@
       <div class="bg-indigo-600 p-3 rounded-2xl shadow-lg"><span class="text-white text-2xl">🧪</span></div>
       <div class="min-w-0">
         <h1 class="text-lg sm:text-2xl font-bold text-slate-800 flex items-center flex-wrap gap-2">시험 스케줄 관리 시스템
-          <span class="text-xs font-normal bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">V1.26.2</span>
+          <span class="text-xs font-normal bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">V1.27.0</span>
         </h1>
         <p class="text-xs sm:text-sm text-indigo-500 font-medium">구글시트 연동 · 🔒 업무현황 자동반영</p>
       </div>
@@ -195,6 +195,27 @@
         <button id="btn-auto-schedule" onclick="openAutoScheduleModal1()" class="hidden w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs py-2.5 rounded-xl transition-all">🤖 자동계획 수립</button>
         <button id="btn-dedupe-master" onclick="openDedupeMasterModal()" class="hidden w-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs py-2.5 rounded-xl transition-all">🧹 마스터 반영 중복 정리</button>
         <button id="btn-memo" onclick="openMemoModal()" class="hidden w-full bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-bold text-xs py-2.5 rounded-xl transition-all">📝 메모 / 회의록</button>
+      </div>
+      <!-- 근태 등록 (V1.27.0): 뷰어 권한자도 본인 근태는 등록/수정/삭제 가능 -->
+      <div class="border-t border-slate-100 pt-4">
+        <button id="btn-toggle-attendance" onclick="toggleAttendancePanel()" class="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-xs py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5">
+          <span>🗓️ 근태 등록</span><span id="attendance-toggle-icon">▸</span>
+        </button>
+        <div id="attendance-panel" class="hidden mt-3 space-y-2.5 bg-emerald-50/60 border border-emerald-100 rounded-xl p-3">
+          <div>
+            <label class="field-label">날짜</label>
+            <input id="att-date" type="date" class="field-input !bg-white w-full">
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="field-label !mb-0">근태유형</label>
+              <button id="btn-manage-att-types" onclick="openAttendanceTypeManageModal()" class="hidden text-[10px] font-bold text-emerald-700 hover:underline">⚙️ 유형 관리</button>
+            </div>
+            <select id="att-type" class="field-input !bg-white w-full"></select>
+          </div>
+          <button onclick="submitAttendanceRegister()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-xl text-xs shadow transition-all">✅ 등록하기</button>
+          <p class="text-[10px] text-emerald-700/70 font-semibold leading-relaxed">등록한 근태는 캘린더·타임라인의 '근태' 행에서 확인/수정할 수 있어요.</p>
+        </div>
       </div>
     </aside>
 
@@ -594,9 +615,50 @@
   </div>
 </div>
 
+<!-- ===================== 모달: 근태 상세(수정/삭제) (V1.27.0) ===================== -->
+<div id="modal-attendance-edit" class="modal-overlay">
+  <div class="glass-card bg-white w-full max-w-sm rounded-[32px] p-5 sm:p-8">
+    <div class="flex justify-between items-start mb-5">
+      <h3 class="text-lg font-bold text-slate-800">🗓️ 근태 상세</h3>
+      <button onclick="closeModal('modal-attendance-edit')" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+    </div>
+    <input type="hidden" id="att-edit-id">
+    <div class="space-y-4">
+      <div><label class="field-label">이름</label><input id="att-edit-owner" class="field-input" disabled></div>
+      <div><label class="field-label">날짜</label><input id="att-edit-date" type="date" class="field-input"></div>
+      <div><label class="field-label">근태유형</label><select id="att-edit-type" class="field-input"></select></div>
+    </div>
+    <p id="att-edit-readonly-note" class="hidden text-[11px] text-slate-400 font-semibold mt-3">본인이 등록한 근태만 수정/삭제할 수 있어요.</p>
+    <div class="flex gap-2 mt-6">
+      <button id="att-edit-save-btn" onclick="saveAttendanceEdit()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-lg transition-all">저장</button>
+      <button id="att-edit-delete-btn" onclick="deleteAttendanceEntry()" class="flex-1 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold py-2.5 rounded-xl text-xs transition-all">삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 모달: 근태유형 관리 (관리자 전용) (V1.27.0) ===================== -->
+<div id="modal-attendance-types" class="modal-overlay">
+  <div class="glass-card bg-white w-full max-w-md rounded-[32px] p-5 sm:p-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
+    <div class="flex justify-between items-start mb-5">
+      <h3 class="text-lg font-bold text-slate-800">⚙️ 근태유형 관리</h3>
+      <button onclick="closeModal('modal-attendance-types')" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+    </div>
+    <div id="att-type-manage-list" class="space-y-2 mb-5"></div>
+    <div class="border-t border-slate-100 pt-4 space-y-2.5">
+      <input type="hidden" id="att-type-edit-id">
+      <div><label class="field-label">유형 이름</label><input id="att-type-name" placeholder="예: 연차" class="field-input"></div>
+      <div><label class="field-label">색상</label><div id="att-type-color-picker" class="flex gap-1.5 flex-wrap"></div></div>
+      <div class="flex gap-2">
+        <button onclick="saveAttendanceTypeEntry()" class="flex-1 bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-xl text-xs transition-all">저장</button>
+        <button id="att-type-cancel-btn" onclick="resetAttendanceTypeForm()" class="hidden px-4 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2.5 rounded-xl text-xs transition-all">취소</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 /* =====================================================================
-   시험 스케줄 관리 시스템 V1.26.2
+   시험 스케줄 관리 시스템 V1.27.0
    - 구글 Apps Script(GAS) 웹앱을 백엔드로 사용
    - 로그인/회원가입, 관리자-편집자-뷰어 권한, 캘린더/타임라인/테이블 뷰
 ===================================================================== */
@@ -647,6 +709,295 @@ const equipments = [
   { id:'event', name:'이벤트', group:'이벤트', icon:'📌' }
 ];
 const groupColors = { '배광UNIT':'bg-indigo-500', '고온UNIT':'bg-orange-500', '환경UNIT':'bg-emerald-500', '가속UNIT':'bg-purple-500', '습기UNIT':'bg-sky-500', '측정UNIT':'bg-cyan-500', '기타UNIT':'bg-slate-500', '휴일':'bg-rose-500', '이벤트':'bg-amber-500' };
+
+/* ============================================================
+   근태 관리 (V1.27.0)
+   - equipments 배열에는 추가하지 않고, schedules 배열에 eqId:'attendance'(개별 기록) /
+     eqId:'attendance_config'(근태유형 목록 설정, 단일 레코드) 로 저장해 기존 GAS 백엔드
+     (saveSchedule/deleteSchedule/read)를 그대로 재사용함 — 서버 스크립트 수정 불필요.
+   - 뷰어 권한자도 본인이 등록한 근태는 등록/수정/삭제 가능 (canEditAttendance)
+============================================================ */
+const ATTENDANCE_EQID = 'attendance';
+const ATTENDANCE_CONFIG_EQID = 'attendance_config';
+const ATTENDANCE_CONFIG_ID = 'attendance_types_config';
+const ATTENDANCE_COLOR_PALETTE = {
+  rose:'bg-rose-500', amber:'bg-amber-500', indigo:'bg-indigo-500', purple:'bg-purple-500',
+  emerald:'bg-emerald-500', sky:'bg-sky-500', orange:'bg-orange-500', slate:'bg-slate-500'
+};
+let attendanceTypes = [
+  { id:'yeonch', name:'연차', color:'rose' },
+  { id:'banch', name:'반차', color:'amber' },
+  { id:'teukgeun', name:'특근', color:'indigo' },
+  { id:'janeop', name:'잔업', color:'purple' }
+];
+let selectedAttTypeColor = 'rose';
+let attendancePanelOpen = false;
+
+function getAttendanceSchedules(){
+  return schedules.filter(s => s.status!=='deleted' && s.eqId===ATTENDANCE_EQID);
+}
+function canCreateAttendance(){ return !!currentUser; }
+function canEditAttendance(s){
+  if (!currentUser) return false;
+  if (canEdit()) return true; // 관리자/편집자는 전체 근태 편집 가능
+  return !!(s && s.owner === currentUser.name); // 뷰어는 본인 근태만
+}
+function getAttendanceTypeMeta(typeId, fallbackName){
+  const t = attendanceTypes.find(x=>x.id===typeId);
+  const colorKey = (t && ATTENDANCE_COLOR_PALETTE[t.color]) ? t.color : 'slate';
+  return {
+    name: t ? t.name : (fallbackName || '근태'),
+    colorKey,
+    colorClass: ATTENDANCE_COLOR_PALETTE[colorKey]
+  };
+}
+
+/* ---------- 근태유형 목록 로드/저장 (schedules 안에 설정 레코드로 보관) ---------- */
+function loadAttendanceTypesFromSchedules(){
+  const cfg = schedules.find(s=>s.eqId===ATTENDANCE_CONFIG_EQID && s.status!=='deleted');
+  if (cfg && cfg.desc){
+    try {
+      const parsed = JSON.parse(cfg.desc);
+      if (Array.isArray(parsed) && parsed.length>0) attendanceTypes = parsed;
+    } catch(e){ /* 파싱 실패 시 기존(기본) 목록 유지 */ }
+  }
+  populateAttendanceTypeSelect('att-type');
+}
+async function persistAttendanceTypes(){
+  const cfg = schedules.find(s=>s.eqId===ATTENDANCE_CONFIG_EQID && s.status!=='deleted');
+  const schedule = {
+    id: cfg ? cfg.id : ATTENDANCE_CONFIG_ID,
+    title: '근태유형 설정',
+    eqId: ATTENDANCE_CONFIG_EQID,
+    startDate: todayStr(),
+    duration: 1,
+    owner: '',
+    desc: JSON.stringify(attendanceTypes),
+    status: 'active',
+    createdBy: currentUser ? currentUser.username : ''
+  };
+  const idx = schedules.findIndex(s=>sameId(s.id, schedule.id));
+  if (idx>-1) schedules[idx] = schedule; else schedules.push(schedule);
+  try {
+    const res = await gasPost('saveSchedule', { schedule });
+    if (res.status!=='success') throw new Error(res.message||'저장 실패');
+  } catch(e){ showToast('근태유형 저장에 실패했습니다.'); }
+}
+
+function populateAttendanceTypeSelect(targetId){
+  const sel = document.getElementById(targetId);
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = attendanceTypes.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+  if (attendanceTypes.some(t=>t.id===current)) sel.value = current;
+}
+
+/* ---------- 좌측 패널: 근태 등록 위젯 ---------- */
+function toggleAttendancePanel(){
+  attendancePanelOpen = !attendancePanelOpen;
+  document.getElementById('attendance-panel').classList.toggle('hidden', !attendancePanelOpen);
+  document.getElementById('attendance-toggle-icon').innerText = attendancePanelOpen ? '▾' : '▸';
+  if (attendancePanelOpen){
+    document.getElementById('att-date').value = todayStr();
+    populateAttendanceTypeSelect('att-type');
+  }
+}
+// 타임라인의 빈 날짜 칸 클릭 등, 특정 날짜를 미리 채운 채로 등록 패널을 열 때 사용
+function openAttendancePanelForDate(dateStr){
+  attendancePanelOpen = true;
+  document.getElementById('attendance-panel').classList.remove('hidden');
+  document.getElementById('attendance-toggle-icon').innerText = '▾';
+  populateAttendanceTypeSelect('att-type');
+  document.getElementById('att-date').value = dateStr;
+  showToast('좌측 "근태 등록" 패널에서 유형을 선택하고 등록해주세요.');
+}
+
+async function submitAttendanceRegister(){
+  if (!canCreateAttendance()) { showToast('로그인 후 이용해주세요.'); return; }
+  const dateStr = document.getElementById('att-date').value;
+  const typeId = document.getElementById('att-type').value;
+  const type = attendanceTypes.find(t=>t.id===typeId);
+  if (!dateStr) { showToast('날짜를 선택해주세요.'); return; }
+  if (!type) { showToast('근태유형을 선택해주세요.'); return; }
+
+  const schedule = {
+    id: Date.now().toString(),
+    title: type.name,
+    eqId: ATTENDANCE_EQID,
+    startDate: dateStr,
+    duration: 1,
+    owner: currentUser.name,
+    desc: type.id,
+    status: 'active',
+    createdBy: currentUser.username
+  };
+  schedules.push(schedule);
+  renderCurrentView();
+  showToast('근태가 등록되었습니다.');
+
+  try {
+    const res = await gasPost('saveSchedule', { schedule });
+    if (res.status!=='success') throw new Error(res.message||'저장 실패');
+  } catch(e){
+    schedules = schedules.filter(s=>!sameId(s.id, schedule.id));
+    renderCurrentView();
+    showToast('근태 등록에 실패했습니다. 다시 시도해주세요.');
+  }
+}
+
+/* ---------- 근태 상세 모달 (수정/삭제) ---------- */
+function openAttendanceModal(s){
+  const editable = canEditAttendance(s);
+  document.getElementById('att-edit-id').value = s.id;
+  document.getElementById('att-edit-owner').value = s.owner || '';
+  document.getElementById('att-edit-date').value = s.startDate;
+  populateAttendanceTypeSelect('att-edit-type');
+  const typeIdToSelect = attendanceTypes.some(t=>t.id===s.desc) ? s.desc : '';
+  document.getElementById('att-edit-type').value = typeIdToSelect;
+  document.getElementById('att-edit-date').disabled = !editable;
+  document.getElementById('att-edit-type').disabled = !editable;
+  document.getElementById('att-edit-save-btn').classList.toggle('hidden', !editable);
+  document.getElementById('att-edit-delete-btn').classList.toggle('hidden', !editable);
+  document.getElementById('att-edit-readonly-note').classList.toggle('hidden', editable);
+  openModal('modal-attendance-edit');
+}
+
+function openDayAttendanceListModal(dateStr, items){
+  document.getElementById('daylist-title').innerText = `🗓️ ${dateStr} 근태`;
+  document.getElementById('daylist-count').innerText = `총 ${items.length}건`;
+  const wrap = document.getElementById('daylist-items');
+  wrap.innerHTML = items.map(s=>{
+    const meta = getAttendanceTypeMeta(s.desc, s.title);
+    return `<div onclick='closeModal("modal-daylist");openAttendanceModal(${JSON.stringify(s).replace(/'/g,"&#39;")})' class="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl cursor-pointer flex items-center gap-2">
+      <span class="text-white text-[10px] font-bold px-2 py-1 rounded ${meta.colorClass}">${meta.name}</span>
+      <span class="text-sm font-bold text-slate-700">${s.owner||''}</span>
+    </div>`;
+  }).join('');
+  openModal('modal-daylist');
+}
+
+async function saveAttendanceEdit(){
+  const id = document.getElementById('att-edit-id').value;
+  const idx = schedules.findIndex(s=>sameId(s.id, id));
+  if (idx<0) return;
+  if (!canEditAttendance(schedules[idx])) return;
+  const dateStr = document.getElementById('att-edit-date').value;
+  const typeId = document.getElementById('att-edit-type').value;
+  const type = attendanceTypes.find(t=>t.id===typeId);
+  if (!dateStr || !type) { showToast('날짜와 근태유형을 확인해주세요.'); return; }
+
+  const prev = { ...schedules[idx] };
+  const updated = { ...schedules[idx], startDate: dateStr, desc: type.id, title: type.name };
+  schedules[idx] = updated;
+  closeModal('modal-attendance-edit');
+  renderCurrentView();
+  showToast('저장되었습니다.');
+
+  try {
+    const res = await gasPost('saveSchedule', { schedule: updated });
+    if (res.status!=='success') throw new Error(res.message||'저장 실패');
+  } catch(e){
+    schedules[idx] = prev;
+    renderCurrentView();
+    showToast('저장에 실패했습니다. 다시 시도해주세요.');
+  }
+}
+
+async function deleteAttendanceEntry(){
+  const id = document.getElementById('att-edit-id').value;
+  const idx = schedules.findIndex(s=>sameId(s.id, id));
+  if (idx<0) return;
+  if (!canEditAttendance(schedules[idx])) return;
+  if (!confirm('이 근태 기록을 삭제하시겠습니까?')) return;
+  const removed = schedules[idx];
+  schedules = schedules.filter(s=>!sameId(s.id, id));
+  closeModal('modal-attendance-edit');
+  renderCurrentView();
+  showToast('삭제되었습니다.');
+
+  try {
+    const res = await gasPost('deleteSchedule', { id });
+    if (res.status!=='success') throw new Error(res.message||'삭제 실패');
+  } catch(e){
+    schedules.push(removed);
+    renderCurrentView();
+    showToast('삭제에 실패했습니다. 다시 시도해주세요.');
+  }
+}
+
+/* ---------- 근태유형 관리 모달 (관리자 전용) ---------- */
+function openAttendanceTypeManageModal(){
+  if (!isAdmin()) return;
+  resetAttendanceTypeForm();
+  renderAttendanceTypeManageList();
+  openModal('modal-attendance-types');
+}
+function renderAttendanceColorPicker(){
+  const wrap = document.getElementById('att-type-color-picker');
+  if (!wrap) return;
+  wrap.innerHTML = Object.keys(ATTENDANCE_COLOR_PALETTE).map(key=>{
+    const active = selectedAttTypeColor===key;
+    return `<button type="button" onclick="selectAttTypeColor('${key}')" class="w-7 h-7 rounded-full ${ATTENDANCE_COLOR_PALETTE[key]} ${active?'ring-2 ring-offset-2 ring-slate-800':''}"></button>`;
+  }).join('');
+}
+function selectAttTypeColor(key){ selectedAttTypeColor = key; renderAttendanceColorPicker(); }
+
+function renderAttendanceTypeManageList(){
+  const wrap = document.getElementById('att-type-manage-list');
+  if (attendanceTypes.length===0){ wrap.innerHTML = `<p class="text-xs text-slate-400">등록된 유형이 없습니다.</p>`; return; }
+  wrap.innerHTML = attendanceTypes.map(t=>{
+    const colorClass = ATTENDANCE_COLOR_PALETTE[t.color] || ATTENDANCE_COLOR_PALETTE.slate;
+    return `
+      <div class="flex items-center justify-between p-2 bg-slate-50 rounded-lg">
+        <span class="text-xs font-bold px-2 py-1 rounded text-white ${colorClass}">${t.name}</span>
+        <div class="flex gap-1.5">
+          <button onclick='editAttendanceTypeEntry(${JSON.stringify(t).replace(/'/g,"&#39;")})' class="text-slate-400 hover:text-indigo-600 text-xs">✏️</button>
+          <button onclick="deleteAttendanceTypeEntry('${t.id}')" class="text-slate-400 hover:text-rose-500 text-xs">🗑️</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function resetAttendanceTypeForm(){
+  document.getElementById('att-type-edit-id').value = '';
+  document.getElementById('att-type-name').value = '';
+  document.getElementById('att-type-cancel-btn').classList.add('hidden');
+  selectedAttTypeColor = 'rose';
+  renderAttendanceColorPicker();
+}
+function editAttendanceTypeEntry(t){
+  document.getElementById('att-type-edit-id').value = t.id;
+  document.getElementById('att-type-name').value = t.name;
+  document.getElementById('att-type-cancel-btn').classList.remove('hidden');
+  selectedAttTypeColor = t.color || 'rose';
+  renderAttendanceColorPicker();
+}
+async function saveAttendanceTypeEntry(){
+  if (!isAdmin()) return;
+  const name = document.getElementById('att-type-name').value.trim();
+  if (!name) { showToast('유형 이름을 입력해주세요.'); return; }
+  const editId = document.getElementById('att-type-edit-id').value;
+  if (editId){
+    const idx = attendanceTypes.findIndex(t=>t.id===editId);
+    if (idx>-1) attendanceTypes[idx] = { ...attendanceTypes[idx], name, color: selectedAttTypeColor };
+  } else {
+    attendanceTypes.push({ id: 'att_'+Date.now().toString(36), name, color: selectedAttTypeColor });
+  }
+  resetAttendanceTypeForm();
+  renderAttendanceTypeManageList();
+  populateAttendanceTypeSelect('att-type');
+  showToast('저장되었습니다.');
+  await persistAttendanceTypes();
+}
+async function deleteAttendanceTypeEntry(id){
+  if (!isAdmin()) return;
+  if (!confirm('이 근태유형을 삭제하시겠습니까? (이미 등록된 근태 기록은 그대로 남아있습니다)')) return;
+  attendanceTypes = attendanceTypes.filter(t=>t.id!==id);
+  renderAttendanceTypeManageList();
+  populateAttendanceTypeSelect('att-type');
+  showToast('삭제되었습니다.');
+  await persistAttendanceTypes();
+}
 
 // 대한민국 법정공휴일 10년치 (V1.14.0, 관리자 패널 일괄등록용) — 2026~2030 공공기관 고시 기반, 2031~2033 나무위키 연도별 문서 확인, 2034~2035 음력계산 추정치
 const KOREAN_HOLIDAYS_2026_2035 = [
@@ -1454,6 +1805,8 @@ window.addEventListener('DOMContentLoaded', () => {
   GAS_URL = localStorage.getItem(LS_GAS_URL) || '';
   populateFilterSelects();
   populateEquipmentSelect();
+  populateAttendanceTypeSelect('att-type');
+  renderAttendanceColorPicker();
 
   if (!GAS_URL) { showScreen('screen-setup'); return; }
 
@@ -1635,6 +1988,7 @@ function renderUserBadge(){
   document.getElementById('btn-auto-schedule').classList.toggle('hidden', !isAdmin());
   document.getElementById('btn-dedupe-master').classList.toggle('hidden', !isAdmin());
   document.getElementById('btn-memo').classList.toggle('hidden', !isAdmin());
+  document.getElementById('btn-manage-att-types').classList.toggle('hidden', !isAdmin());
 }
 
 /* ---------------------- 데이터 로드 ---------------------- */
@@ -1646,6 +2000,7 @@ async function loadAllData(){
       users = res.data.users || [];
       schedules = (res.data.schedules || []).map(s => ({...s, duration: parseInt(s.duration)||1, startDate: normalizeDateStr(s.startDate)}));
       permRequests = res.data.requests || [];
+      loadAttendanceTypesFromSchedules(); // 근태유형 설정을 schedules 안의 설정 레코드에서 동기화
 
       // 내 권한이 서버에서 바뀌었을 수 있으므로(승인 등) 동기화
       const me = users.find(u => u.username === currentUser.username);
@@ -1693,6 +2048,7 @@ function resetFilters(){
 function getFilteredSchedules(){
   return schedules.filter(s => {
     if (s.status === 'deleted') return false;
+    if (s.eqId === ATTENDANCE_EQID || s.eqId === ATTENDANCE_CONFIG_EQID) return false; // 근태 데이터는 별도 로직(getAttendanceSchedules)에서 처리
     const eq = getEq(s.eqId);
     if (filters.group !== 'all' && (!eq || eq.group !== filters.group)) return false;
     if (filters.eq !== 'all' && s.eqId !== filters.eq) return false;
@@ -1865,6 +2221,17 @@ function renderCalendar(){
         more.innerText = `전체 ${allDayItems.length}건 보기`;
         more.onclick=(ev)=>{ ev.stopPropagation(); openDayListModal(dateStr, allDayItems); };
         box.appendChild(more);
+      }
+      // 근태: 막대/칩 영역과 완전히 분리해 박스 최하단에 '전체 N건 보기'와 같은 텍스트 링크 형식으로,
+      // 우측 정렬로 표시 (V1.27.0)
+      const dayAtts = getAttendanceSchedules().filter(s => s.startDate === dateStr);
+      if (dayAtts.length>0){
+        const meta = getAttendanceTypeMeta(dayAtts[0].desc, dayAtts[0].title);
+        const attLine = document.createElement('div');
+        attLine.className = `text-[10px] font-black cursor-pointer truncate text-right text-${meta.colorKey}-600`;
+        attLine.innerText = `🗓️ ${dayAtts[0].owner||''} ${meta.name}${dayAtts.length>1?` 외${dayAtts.length-1}`:''}`;
+        attLine.onclick = (ev)=>{ ev.stopPropagation(); dayAtts.length===1 ? openAttendanceModal(dayAtts[0]) : openDayAttendanceListModal(dateStr, dayAtts); };
+        box.appendChild(attLine);
       }
       if (canEdit()){
         box.style.cursor='pointer';
@@ -2184,6 +2551,51 @@ function renderTimeline(){
   const totalContentWidth = LABEL_W + CELL_W*days.length; // LABEL_W = 좌측 장비명 칼럼 너비 (화면폭에 따라 가변)
   document.getElementById('timeline-topscroll-inner').style.width = `${totalContentWidth}px`;
   setupTimelineScrollSync();
+
+  // 근태 행: 장비 필터와 무관하게 항상 최상단(=배광 1호 행 바로 위)에 표시 (V1.27.0)
+  const attendanceSchedules = getAttendanceSchedules();
+  const attRow = document.createElement('div');
+  attRow.className = 'flex border-b-2 border-emerald-100 bg-emerald-50/50';
+  attRow.style.minHeight = '48px';
+  const attLabel = document.createElement('div');
+  attLabel.className = 'shrink-0 p-2 flex items-center gap-2 bg-emerald-50 sticky left-0 z-10';
+  attLabel.style.width = `${LABEL_W}px`;
+  attLabel.innerHTML = `<span>🗓️</span><span class="text-xs font-bold text-emerald-700">근태</span>`;
+  attRow.appendChild(attLabel);
+  const attTrack = document.createElement('div');
+  attTrack.className = 'flex';
+  attTrack.style.width = `${CELL_W*days.length}px`;
+  days.forEach(d=>{
+    const dStr = fmtISO(d);
+    const cell = document.createElement('div');
+    cell.style.width = `${CELL_W}px`;
+    cell.className = 'shrink-0 border-l border-slate-100 p-1 flex flex-col gap-0.5 overflow-hidden';
+    const dayAtts = attendanceSchedules.filter(s=>s.startDate===dStr);
+    dayAtts.slice(0,2).forEach(s=>{
+      const meta = getAttendanceTypeMeta(s.desc, s.title);
+      const chip = document.createElement('div');
+      chip.className = `text-[9px] font-bold text-white rounded px-1 py-0.5 truncate cursor-pointer ${meta.colorClass}`;
+      chip.innerText = `${s.owner||''} ${meta.name}`;
+      chip.title = `${s.owner||''} · ${meta.name} · ${s.startDate}`;
+      chip.onclick = (ev)=>{ ev.stopPropagation(); openAttendanceModal(s); };
+      cell.appendChild(chip);
+    });
+    if (dayAtts.length>2){
+      const more = document.createElement('div');
+      more.className = 'text-[8px] text-emerald-600 font-bold cursor-pointer';
+      more.innerText = `+${dayAtts.length-2}건`;
+      more.onclick = (ev)=>{ ev.stopPropagation(); openDayAttendanceListModal(dStr, dayAtts); };
+      cell.appendChild(more);
+    }
+    if (dayAtts.length===0 && canCreateAttendance()){
+      cell.style.cursor = 'pointer';
+      cell.title = '클릭해서 이 날짜로 근태 등록';
+      cell.onclick = ()=> openAttendancePanelForDate(dStr);
+    }
+    attTrack.appendChild(cell);
+  });
+  attRow.appendChild(attTrack);
+  container.appendChild(attRow);
 
   const filteredEq = equipments.filter(eq => eq.id!=='holiday' && eq.id!=='event' && (filters.group==='all'||eq.group===filters.group) && (filters.eq==='all'||eq.id===filters.eq));
 
@@ -2513,7 +2925,7 @@ async function requestDeleteSchedule(id){
 ============================================================ */
 function findDuplicateAppSchedules(){
   const masters = schedules.filter(s=> isMasterSchedule(s) && s.status!=='deleted');
-  const manuals = schedules.filter(s=> !isMasterSchedule(s) && s.status!=='deleted' && s.eqId!=='holiday' && s.eqId!=='event');
+  const manuals = schedules.filter(s=> !isMasterSchedule(s) && s.status!=='deleted' && s.eqId!=='holiday' && s.eqId!=='event' && s.eqId!==ATTENDANCE_EQID && s.eqId!==ATTENDANCE_CONFIG_EQID);
   const dups = [];
   manuals.forEach(m=>{
     const norm = v => String(v||'').trim();
