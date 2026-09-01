@@ -381,12 +381,21 @@
 <div id="modal-weekend-conflict" class="modal-overlay">
   <div class="glass-card bg-white w-full max-w-sm rounded-[32px] p-5 sm:p-8">
     <h3 class="text-lg font-bold text-amber-600 mb-1">📅 주말/공휴일 포함 경고</h3>
-    <p class="text-xs text-slate-500 font-semibold mb-4">환경UNIT을 제외한 장비는 주말/공휴일을 시험진행일로 포함할 수 없습니다. 그래도 이대로 저장할지 확인해주세요.</p>
+    <p class="text-xs text-slate-500 font-semibold mb-4">환경UNIT을 제외한 장비는 원칙적으로 주말/공휴일을 시험진행일로 포함할 수 없습니다. 어떻게 반영할지 선택해주세요.</p>
     <div id="weekend-conflict-summary" class="bg-amber-50 border border-amber-100 rounded-xl p-3 text-xs text-amber-700 font-bold mb-3"></div>
-    <div id="weekend-conflict-list" class="space-y-1.5 mb-5 max-h-32 overflow-y-auto custom-scrollbar"></div>
-    <div class="flex gap-2 justify-end">
-      <button onclick="resolveWeekendConflict(false)" class="py-2.5 px-5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200">수립취소</button>
-      <button onclick="resolveWeekendConflict(true)" class="py-2.5 px-6 bg-amber-500 text-white font-bold rounded-xl shadow-lg hover:bg-amber-600">그래도 저장</button>
+    <div id="weekend-conflict-list" class="space-y-1.5 mb-4 max-h-28 overflow-y-auto custom-scrollbar"></div>
+    <div class="space-y-2 mb-2">
+      <button onclick="resolveWeekendConflict('adjust')" class="w-full text-left py-3 px-4 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-100">
+        <p class="text-sm font-bold text-emerald-700">✅ 주말/공휴일 제외하고 근무일로 반영</p>
+        <p id="weekend-conflict-adjust-preview" class="text-[11px] text-emerald-600 font-semibold mt-0.5">비근무일을 건너뛰어 시작일/종료일을 자동으로 조정합니다.</p>
+      </button>
+      <button onclick="resolveWeekendConflict('asis')" class="w-full text-left py-3 px-4 bg-rose-50 border border-rose-200 rounded-xl hover:bg-rose-100">
+        <p class="text-sm font-bold text-rose-700">⚠️ 입력한 그대로 주말/공휴일 포함해서 저장</p>
+        <p class="text-[11px] text-rose-600 font-semibold mt-0.5">입력하신 시작일/기간을 수정하지 않고 그대로 저장합니다.</p>
+      </button>
+    </div>
+    <div class="flex justify-end">
+      <button onclick="resolveWeekendConflict('cancel')" class="py-2 px-4 text-slate-400 font-bold text-xs hover:text-slate-600">수립취소</button>
     </div>
   </div>
 </div>
@@ -1500,6 +1509,12 @@ function candidateRangeHasWeekend(start, end){
   }
   return false;
 }
+function getNonWorkDaysInRange(start, end){
+  const days = [];
+  const d = new Date(start);
+  while (d <= end){ if (isNonWorkDay(d)) days.push(new Date(d)); d.setDate(d.getDate()+1); }
+  return days;
+}
 
 /* ---------- 수동입력 저장 시 주말/공휴일 포함 검증 (V1.29.0) ----------
    - 환경UNIT: 검사 대상 아님 (주말/공휴일도 시험진행일로 간주 가능)
@@ -1516,20 +1531,43 @@ function checkNonWorkDayViolation(schedule){
   const duration = parseInt(schedule.duration)||1;
   const end = new Date(start); end.setDate(end.getDate()+duration-1);
   const dowNames = ['일','월','화','수','목','금','토'];
-  const hitDays = [];
-  const d = new Date(start);
-  while (d <= end){
-    if (isNonWorkDay(d)) hitDays.push(`${fmtISO(d)}(${dowNames[d.getDay()]}) ${isWeekendDate(d) ? '· 주말' : '· 공휴일'}`);
-    d.setDate(d.getDate()+1);
-  }
-  if (hitDays.length===0) return null;
+  const nonWorkDays = getNonWorkDaysInRange(start, end);
+  if (nonWorkDays.length===0) return null;
+  const hitDays = nonWorkDays.map(d=> `${fmtISO(d)}(${dowNames[d.getDay()]}) ${isWeekendDate(d) ? '· 주말' : '· 공휴일'}`);
   const isMoisture = eq.group === '습기UNIT';
+  const adjusted = computeNonWorkAdjustedSchedule(schedule, eq);
   return {
-    eq, hitDays,
+    eq, hitDays, adjusted,
     message: isMoisture
       ? `💧 ${eq.name}(습기UNIT)은 시험기간에 주말/공휴일이 하루라도 포함되면 안 됩니다. (${hitDays.length}일 겹침)`
       : `⚠️ ${eq.name}은(는) 환경UNIT이 아니므로, 주말/공휴일을 시험진행일로 포함하면 안 됩니다. (${hitDays.length}일 겹침)`
   };
+}
+
+// "주말/공휴일 제외하고 근무일로 반영" 선택 시 사용할 조정값 계산
+// - 습기UNIT: 기간 전체(연속)에 비근무일이 전혀 없는 가장 빠른 시작일을 재탐색 (자동계획과 동일 규칙, V1.26.0 로직 재사용)
+// - 그 외 장비: 시작일이 비근무일이면 다음 근무일로 이동, 이후 비근무일은 시험일수에 세지 않고 건너뛰며 종료일 계산(달력기간은 늘어남)
+function computeNonWorkAdjustedSchedule(schedule, eq){
+  const testDays = parseInt(schedule.duration)||1;
+  const origStart = new Date(schedule.startDate);
+  if (eq.group === '습기UNIT'){
+    const HORIZON = 60;
+    let candidate = nextWeekdayNonHoliday(new Date(origStart));
+    let attempts = 0;
+    while (attempts < HORIZON){
+      const end = new Date(candidate); end.setDate(end.getDate()+testDays-1);
+      if (getNonWorkDaysInRange(candidate, end).length===0){
+        return { startDate: fmtISO(candidate), duration: testDays, endDate: fmtISO(end) };
+      }
+      candidate = nextWeekdayNonHoliday(new Date(candidate.getTime()+86400000));
+      attempts++;
+    }
+    return { startDate: schedule.startDate, duration: testDays, endDate: schedule.startDate }; // 이론상 도달하지 않음(안전장치)
+  }
+  const adjustedStart = isNonWorkDay(origStart) ? nextWeekdayNonHoliday(origStart) : origStart;
+  const end = computeEndDateForDuration(adjustedStart, testDays, true);
+  const calDuration = Math.round((end-adjustedStart)/86400000)+1;
+  return { startDate: fmtISO(adjustedStart), duration: calDuration, endDate: fmtISO(end) };
 }
 
 let pendingWeekendCheckResolve = null;
@@ -1540,12 +1578,16 @@ function showWeekendConflictModal(info){
     document.getElementById('weekend-conflict-list').innerHTML = info.hitDays.map(s=>
       `<div class="text-[11px] text-slate-600 bg-slate-50 rounded-lg px-2.5 py-1.5">📅 ${s}</div>`
     ).join('');
+    const a = info.adjusted;
+    document.getElementById('weekend-conflict-adjust-preview').innerText =
+      a.duration>1 ? `조정 결과: ${a.startDate} ~ ${a.endDate} (${a.duration}일)로 저장됩니다.` : `조정 결과: ${a.startDate} 하루로 저장됩니다.`;
     openModal('modal-weekend-conflict');
   });
 }
-function resolveWeekendConflict(allow){
+// choice: 'cancel' | 'asis'(입력한 그대로 주말/공휴일 포함 저장) | 'adjust'(비근무일 제외하고 자동 조정 저장)
+function resolveWeekendConflict(choice){
   closeModal('modal-weekend-conflict');
-  if (pendingWeekendCheckResolve){ pendingWeekendCheckResolve(allow); pendingWeekendCheckResolve = null; }
+  if (pendingWeekendCheckResolve){ pendingWeekendCheckResolve(choice); pendingWeekendCheckResolve = null; }
 }
 
 /* ---------- 가용성 계산 ---------- */
@@ -2985,8 +3027,14 @@ async function saveScheduleFromModal(){
   // 주말/공휴일 포함 검사 (환경UNIT 제외 장비, 특히 습기UNIT은 겹침 자체 금지) — 검증만 하고 반영여부는 사용자가 선택 (V1.29.0)
   const weekendViolation = checkNonWorkDayViolation(schedule);
   if (weekendViolation){
-    const allowed = await showWeekendConflictModal(weekendViolation);
-    if (!allowed) return; // 수립취소 -> 저장하지 않고 모달만 닫고 종료 (schedule 모달은 열린 상태 유지)
+    const choice = await showWeekendConflictModal(weekendViolation);
+    if (choice === 'cancel') return; // 수립취소 -> 저장하지 않고 모달만 닫고 종료 (schedule 모달은 열린 상태 유지)
+    if (choice === 'adjust'){
+      // 주말/공휴일 제외하고 근무일로 반영: 시작일/기간을 자동 조정된 값으로 대체
+      schedule.startDate = weekendViolation.adjusted.startDate;
+      schedule.duration = weekendViolation.adjusted.duration;
+    }
+    // choice === 'asis'면 입력한 시작일/기간 그대로 두고 진행 (주말/공휴일 포함해서 저장)
   }
 
   // 지그 리소스 부족 검사 (동일 차종+품목 2건 초과 시 확인)
