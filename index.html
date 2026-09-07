@@ -71,6 +71,9 @@
   #memo-content[contenteditable]{width:100%;min-height:110px;max-height:260px;overflow-y:auto;padding:.65rem .8rem;background:#f8fafc;border-radius:0 0 .7rem .7rem;border:1px solid transparent;outline:none;font-weight:600;font-size:.85rem;line-height:1.5;transition:all .15s;}
   #memo-content[contenteditable]:focus{border-color:#a5b4fc;background:#fff;}
   #memo-content[contenteditable]:empty:before{content:attr(data-placeholder);color:#94a3b8;font-weight:600;}
+  #filter-eq-details summary{list-style:none;}
+  #filter-eq-details summary::-webkit-details-marker{display:none;}
+  #filter-eq-details[open] #filter-eq-caret{transform:rotate(180deg);}
   .memo-rte-table{border-collapse:collapse;margin:6px 0;}
   .memo-rte-table td{border:1px solid #cbd5e1;padding:4px 8px;min-width:40px;}
   .memo-rich-content table{border-collapse:collapse;margin:6px 0;}
@@ -201,8 +204,20 @@
         <select id="filter-group" onchange="onFilterChange()" class="field-input !bg-slate-50 w-full"></select>
       </div>
       <div>
-        <label class="field-label">장비</label>
-        <select id="filter-eq" onchange="onFilterChange()" class="field-input !bg-slate-50 w-full"></select>
+        <label class="field-label flex items-center justify-between">장비 <span class="normal-case font-semibold text-slate-300">(다중 선택)</span></label>
+        <details id="filter-eq-details" class="relative">
+          <summary id="filter-eq-summary" class="field-input !bg-slate-50 w-full cursor-pointer flex items-center justify-between gap-2">
+            <span id="filter-eq-label" class="truncate">전체 장비</span>
+            <span id="filter-eq-caret" class="text-slate-400 shrink-0 transition-transform">▾</span>
+          </summary>
+          <div class="absolute z-20 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg p-2">
+            <div class="flex justify-between items-center px-1 pb-1.5 mb-1 border-b border-slate-100">
+              <button type="button" onclick="setAllEqFilter(true)" class="text-[10px] font-bold text-indigo-600 hover:underline">전체 선택</button>
+              <button type="button" onclick="setAllEqFilter(false)" class="text-[10px] font-bold text-slate-400 hover:underline">전체 해제</button>
+            </div>
+            <div id="filter-eq-checklist" class="space-y-0.5 max-h-52 overflow-y-auto custom-scrollbar"></div>
+          </div>
+        </details>
       </div>
       <div>
         <label class="field-label">검색</label>
@@ -592,16 +607,17 @@
 
 <!-- ===================== 모달: 메모 / 회의록 ===================== -->
 <div id="modal-memo" class="modal-overlay">
-  <div class="glass-card bg-white w-full max-w-lg rounded-[32px] p-5 sm:p-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
-    <div class="flex justify-between items-start mb-4">
+  <div class="glass-card bg-white w-full max-w-lg rounded-[32px] max-h-[85vh] overflow-hidden flex flex-col">
+    <div class="flex justify-between items-start px-5 sm:px-8 pt-5 sm:pt-8 mb-4 shrink-0">
       <h3 class="text-lg font-bold text-slate-800">📝 메모 / 회의록</h3>
       <button onclick="closeModal('modal-memo')" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
     </div>
 
-    <div class="flex bg-slate-100 p-1 rounded-xl mb-5 w-fit">
-      <button id="memo-tab-date" onclick="switchMemoTab('date')" class="tab-btn active !text-xs !py-2">📅 날짜별</button>
-      <button id="memo-tab-all" onclick="switchMemoTab('all')" class="tab-btn !text-xs !py-2">📋 전체 목록</button>
-    </div>
+    <div class="overflow-y-auto custom-scrollbar px-5 sm:px-8 pb-5 sm:pb-8">
+      <div class="flex bg-slate-100 p-1 rounded-xl mb-5 w-fit">
+        <button id="memo-tab-date" onclick="switchMemoTab('date')" class="tab-btn active !text-xs !py-2">📅 날짜별</button>
+        <button id="memo-tab-all" onclick="switchMemoTab('all')" class="tab-btn !text-xs !py-2">📋 전체 목록</button>
+      </div>
 
     <!-- 날짜별 보기 -->
     <div id="memo-view-date">
@@ -645,6 +661,12 @@
             <span class="text-[10px] text-slate-400 font-bold">×</span>
             <input type="number" id="memo-table-cols" value="3" min="1" max="10" title="열 수" class="rte-num-input">
             <button type="button" title="표 삽입" onmousedown="event.preventDefault()" onclick="insertMemoTable()" class="rte-btn" style="width:auto;padding:0 8px;">🔳 표</button>
+            <div class="rte-sep"></div>
+            <button type="button" title="커서가 있는 표에 행 추가" onmousedown="event.preventDefault()" onclick="memoTableAddRow()" class="rte-btn" style="width:auto;padding:0 6px;">행+</button>
+            <button type="button" title="커서가 있는 행 삭제" onmousedown="event.preventDefault()" onclick="memoTableRemoveRow()" class="rte-btn" style="width:auto;padding:0 6px;">행-</button>
+            <button type="button" title="커서가 있는 표에 열 추가" onmousedown="event.preventDefault()" onclick="memoTableAddCol()" class="rte-btn" style="width:auto;padding:0 6px;">열+</button>
+            <button type="button" title="커서가 있는 열 삭제" onmousedown="event.preventDefault()" onclick="memoTableRemoveCol()" class="rte-btn" style="width:auto;padding:0 6px;">열-</button>
+            <button type="button" title="커서가 있는 표 전체 삭제" onmousedown="event.preventDefault()" onclick="memoTableDelete()" class="rte-btn" style="width:auto;padding:0 6px;color:#e11d48;">표삭제</button>
           </div>
           <div id="memo-content" contenteditable="true" data-placeholder="회의 내용, 결정사항, 특이사항 등을 자유롭게 적어주세요. (이미지는 Ctrl+V로 붙여넣을 수 있어요)"></div>
         </div>
@@ -672,6 +694,7 @@
       </div>
       <div id="memo-category-filter" class="flex flex-wrap gap-1.5 mb-4"></div>
       <div id="memo-all-list" class="space-y-3 max-h-[50vh] overflow-y-auto custom-scrollbar"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -815,7 +838,7 @@ let permRequests = [];
 
 let currentView = 'calendar';
 let currentMonthDate = new Date(); // 캘린더/타임라인이 공유하는 "현재 보고 있는 달" (V1.8.0: 뷰 간 불일치 방지)
-let filters = { group: 'all', eq: 'all', search: '' };
+let filters = { group: 'all', eqIds: [], search: '' };
 let tableSort = { col: 'startDate', dir: 'asc' };
 let editingScheduleReadOnly = false;
 
@@ -3024,8 +3047,25 @@ function populateFilterSelects(){
   const groups = [...new Set(equipments.map(e=>e.group))];
   groupSel.innerHTML = `<option value="all">전체 그룹</option>` + groups.map(g=>`<option value="${g}">${g}</option>`).join('');
 
-  const eqSel = document.getElementById('filter-eq');
-  eqSel.innerHTML = `<option value="all">전체 장비</option>` + equipments.map(e=>`<option value="${e.id}">${e.icon} ${e.name}</option>`).join('');
+  const checklist = document.getElementById('filter-eq-checklist');
+  const prevChecked = new Set(filters.eqIds || []);
+  checklist.innerHTML = equipments.map(e=>`
+    <label class="flex items-center gap-2 px-1.5 py-1 rounded-lg hover:bg-slate-50 cursor-pointer text-xs font-semibold text-slate-600">
+      <input type="checkbox" value="${e.id}" ${prevChecked.has(e.id)?'checked':''} onchange="onFilterChange()" class="rounded border-slate-300 text-indigo-600 focus:ring-0 w-3.5 h-3.5 shrink-0">
+      <span class="truncate">${e.icon} ${e.name}</span>
+    </label>`).join('');
+  updateFilterEqLabel();
+}
+function updateFilterEqLabel(){
+  const checked = Array.from(document.querySelectorAll('#filter-eq-checklist input:checked'));
+  const labelEl = document.getElementById('filter-eq-label');
+  if (checked.length===0) labelEl.textContent = '전체 장비';
+  else if (checked.length===1) labelEl.textContent = checked[0].nextElementSibling.textContent.trim();
+  else labelEl.textContent = `${checked.length}개 장비 선택됨`;
+}
+function setAllEqFilter(checked){
+  document.querySelectorAll('#filter-eq-checklist input').forEach(cb=>{ cb.checked = checked; });
+  onFilterChange();
 }
 function populateEquipmentSelect(){
   const sel = document.getElementById('sch-eqid');
@@ -3033,15 +3073,17 @@ function populateEquipmentSelect(){
 }
 function onFilterChange(){
   filters.group = document.getElementById('filter-group').value;
-  filters.eq = document.getElementById('filter-eq').value;
+  filters.eqIds = Array.from(document.querySelectorAll('#filter-eq-checklist input:checked')).map(cb=>cb.value);
   filters.search = document.getElementById('filter-search').value.toLowerCase().trim();
+  updateFilterEqLabel();
   renderCurrentView();
 }
 function resetFilters(){
   document.getElementById('filter-group').value='all';
-  document.getElementById('filter-eq').value='all';
+  document.querySelectorAll('#filter-eq-checklist input').forEach(cb=>{ cb.checked=false; });
   document.getElementById('filter-search').value='';
-  filters = { group:'all', eq:'all', search:'' };
+  filters = { group:'all', eqIds:[], search:'' };
+  updateFilterEqLabel();
   renderCurrentView();
 }
 function getFilteredSchedules(){
@@ -3051,7 +3093,7 @@ function getFilteredSchedules(){
     if (s.eqId === RESULT_REVIEW_EQID) return false; // 결과 리뷰 레코드는 원본 일정의 부속 데이터이므로 일반 목록에서 제외
     const eq = getEq(s.eqId);
     if (filters.group !== 'all' && (!eq || eq.group !== filters.group)) return false;
-    if (filters.eq !== 'all' && s.eqId !== filters.eq) return false;
+    if (filters.eqIds && filters.eqIds.length > 0 && !filters.eqIds.includes(s.eqId)) return false;
     if (filters.search) {
       const hay = `${s.title} ${s.owner||''} ${s.desc||''}`.toLowerCase();
       if (!hay.includes(filters.search)) return false;
@@ -3597,7 +3639,7 @@ function renderTimeline(){
   attRow.appendChild(attTrack);
   container.appendChild(attRow);
 
-  const filteredEq = equipments.filter(eq => eq.id!=='holiday' && eq.id!=='event' && (filters.group==='all'||eq.group===filters.group) && (filters.eq==='all'||eq.id===filters.eq));
+  const filteredEq = equipments.filter(eq => eq.id!=='holiday' && eq.id!=='event' && (filters.group==='all'||eq.group===filters.group) && (!filters.eqIds || filters.eqIds.length===0 || filters.eqIds.includes(eq.id)));
 
   if (filteredEq.length===0){
     container.innerHTML += `<div class="p-10 text-center text-slate-400 text-sm">조건에 맞는 장비가 없습니다.</div>`;
@@ -4285,6 +4327,72 @@ function stripHtml(html){
   const d = document.createElement('div');
   d.innerHTML = html || '';
   return d.textContent || d.innerText || '';
+}
+
+/* ---------- 메모 표 편집/삭제 ---------- */
+function getMemoActiveCell(){
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return null;
+  let node = sel.getRangeAt(0).startContainer;
+  if (node.nodeType === 3) node = node.parentElement;
+  if (!node || !document.getElementById('memo-content').contains(node)) return null;
+  return node.closest('td,th');
+}
+function getMemoActiveTable(cell){
+  cell = cell !== undefined ? cell : getMemoActiveCell();
+  if (cell) return cell.closest('table.memo-rte-table');
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return null;
+  let node = sel.getRangeAt(0).startContainer;
+  if (node.nodeType === 3) node = node.parentElement;
+  if (!node || !document.getElementById('memo-content').contains(node)) return null;
+  return node.closest('table.memo-rte-table');
+}
+function memoTableAddRow(){
+  const cell = getMemoActiveCell();
+  const table = getMemoActiveTable(cell);
+  if (!table){ showToast('행을 추가할 표 안에 커서를 놓고 눌러주세요.'); return; }
+  const refRow = cell ? cell.parentElement : table.querySelector('tr');
+  const colCount = refRow.children.length;
+  const newRow = document.createElement('tr');
+  for (let i=0;i<colCount;i++){ const td=document.createElement('td'); td.innerHTML='&nbsp;'; newRow.appendChild(td); }
+  refRow.parentElement.insertBefore(newRow, refRow.nextSibling);
+}
+function memoTableRemoveRow(){
+  const cell = getMemoActiveCell();
+  if (!cell){ showToast('삭제할 행 안에 커서를 놓고 눌러주세요.'); return; }
+  const row = cell.parentElement;
+  const table = row.closest('table.memo-rte-table');
+  if (!table) return;
+  const tbody = row.parentElement;
+  if (tbody.children.length <= 1){ table.remove(); return; }
+  row.remove();
+}
+function memoTableAddCol(){
+  const cell = getMemoActiveCell();
+  const table = getMemoActiveTable(cell);
+  if (!table){ showToast('열을 추가할 표 안에 커서를 놓고 눌러주세요.'); return; }
+  const idx = cell ? Array.from(cell.parentElement.children).indexOf(cell) : -1;
+  table.querySelectorAll('tr').forEach(tr=>{
+    const td = document.createElement('td'); td.innerHTML='&nbsp;';
+    if (idx>=0 && tr.children[idx]) tr.insertBefore(td, tr.children[idx].nextSibling);
+    else tr.appendChild(td);
+  });
+}
+function memoTableRemoveCol(){
+  const cell = getMemoActiveCell();
+  if (!cell){ showToast('삭제할 열 안에 커서를 놓고 눌러주세요.'); return; }
+  const row = cell.parentElement;
+  const table = row.closest('table.memo-rte-table');
+  if (!table) return;
+  if (row.children.length <= 1){ table.remove(); return; }
+  const idx = Array.from(row.children).indexOf(cell);
+  table.querySelectorAll('tr').forEach(tr=>{ if (tr.children[idx]) tr.children[idx].remove(); });
+}
+function memoTableDelete(){
+  const table = getMemoActiveTable();
+  if (!table){ showToast('삭제할 표 안에 커서를 놓고 눌러주세요.'); return; }
+  table.remove();
 }
 
 function resetMemoForm(){
