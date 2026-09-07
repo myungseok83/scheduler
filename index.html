@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 시험 스케줄 관리 시스템 V1.29.0 (관리자 외 회원: 자동계획 수립/마스터 반영 중복 정리/메모 회의록/휴일 등록 메뉴 숨김) (V1.27.0: 좌측 패널 근태 등록 추가 — 뷰어 권한자도 본인 근태 편집 가능, 캘린더/타임라인 배광1호 위에 근태 표시) (V1.27.1: 달의 마지막 날/주의 마지막 칸에 시작하는 일정이 타임라인·캘린더에서 안 보이던 타임존 버그 수정) (V1.27.2: 모바일 공간 확보를 위해 타임라인뷰 상단 안내 문구 제거) (V1.28.0: 일정 상세 모달에 '결과 리뷰' 자유 텍스트 항목 추가) (V1.29.0: 수동 일정입력 시 환경UNIT 제외 장비의 주말/공휴일 포함 여부를 검증하여 경고 후 사용자가 저장여부 선택 가능하도록 개선) (V1.30.0: 관리자 전용 '🔀 밀어내기 후보 추천' 기능 추가 — ① 신규/지연 건이 자리가 없을 때 기존 일정을 순서대로 밀어내는 시뮬레이션과 변경 전/후 비교, ② 이미 계획된 일정 중 예정일이 너무 늦다는 요구로 당기거나(앞당기기) 기간을 단축해야 할 때도 같은 방식으로 뒤 일정을 밀어내는 시뮬레이션 지원(모드 전환). 지그 충돌 시 인접 일정과 순서를 바꿔보는 대안을 자동 탐색해 제안하며, 자동연동(마스터) 일정은 고정된 장애물로 처리해 밀 수 없음을 명확히 알림. 밀리거나 당겨지는 일정은 원래 차지하던 실제 시험일수(근무일)를 유지하도록 주말/공휴일을 감안해 새 위치의 달력기간을 재계산함(자동계획 수립과 동일 규칙: 환경UNIT 예외, 습기UNIT 전체구간 무휴일, 그 외 장비는 시험일수 기준 종료일 산정). 일괄 반영/되돌리기 이력 관리(기간 변경도 함께 원복)) (V1.31.0: 관리자 전용 — 캘린더뷰·타임라인뷰의 계획 막대에 마우스오버하면 '⏪ 당기기/단축' 단축 아이콘이 뜸. 클릭하면 오늘~현재 시작일 사이의 빈 자리(시험일수·지그 기준 검증됨)를 바로 골라 이동할 수 있고, 빈 자리가 없으면 자동으로 '🔀 밀어내기 후보 추천' 모달이 해당 일정이 선택된 상태로 열림) (V1.32.0: 🔒 업무현황 자동연동(마스터) 일정 양방향 동기화 — 편집 권한자는 마스터 일정도 편집 가능해지며, 저장 시 앱 자체 Schedules 시트가 아니라 원본 '시험계획표' 월별 탭 셀에 직접 반영됨(서버의 새 updateMasterSchedule 액션 필요, 별도 GAS 코드 참고). 내용만 수정한 경우 기존 셀의 음영은 유지, 날짜/기간/장비가 바뀌어 자리를 옮긴 경우에는 기존 셀을 비우고 새 위치에 앱 반영 표시용 고정 색상(인디고 계열, #c7d2fe)을 입힘) (V1.33.0: 🔒 마스터 일정에도 호버 단축 팝오버(진행상태 변경/당기기) 개방 — ① 진행상태는 '완료'/'진행' 두 가지만 지원(원본시트 파이프라인이 진행결과 칸에 '완료' 또는 공란만 인식하므로 '지연' 버튼은 마스터 항목에서 숨김, 서버의 새 updateMasterProgressStatus 액션이 월별 탭 진행결과 셀에 직접 반영), ② '당기기/단축'은 updateMasterSchedule 경로로 원본 셀에 반영(관리자 전용, 기존 권한 범위 동일). 추가로 타임라인뷰 막대 라벨을 마스터 일정에 한해 영문 추출 대신 제목(첫 줄) 전체로 표시.) (V1.34.0: 타임라인뷰 막대 라벨을 앱 등록 일정도 마스터와 동일하게 제목(첫 줄) 전체로 표시(영문 추출 방식 폐지). 앱에서 등록한 일정을 원본 '시험계획표' 월별 탭에 반영(pushToAppInput)할 때도 마스터 항목처럼 배경색을 입히되, 고정색이 아니라 항목마다 랜덤한(가독성 있는 밝기·채도 범위 내) 색상을 적용(서버 randomVisibleColor 참고).) (V1.35.0: ① 전체 일정/메모 모달의 세로 스크롤이 둥근 테두리를 뚫고 보이던 렌더링 버그 수정(헤더 고정 + 내부 스크롤 영역 분리). ② 메모/회의록 내용 입력을 리치텍스트로 전면 교체 — 굵게/밑줄/글자색/서식지우기, 표 삽입 및 행·열 추가삭제·표 전체삭제 지원. ③ 사이드 필터의 '장비'를 단일 선택에서 다중 선택 체크리스트로 전환. ④ '📊 대시보드' 뷰 신규 추가 — Chart.js 기반으로 연도별/월별 계획건수 추이, 시험기별·차종별·품목별(TOP10) 계획건수, 진행상태 분포(완료율·변경건수 포함 KPI 카드)를 좌측 필터와 연동해 시각화.) (V1.35.1: 🔒 마스터 일정 저장/당기기 시 서버(GAS V1.21.0)가 원본 시트에서 기존 셀을 못 찾아 못 지운 경우 warning을 반환하도록 바뀐 것에 맞춰, 그 warning을 토스트로 노출하도록 수정. 이 클라이언트 변경은 GAS 쪽도 V1.21.0(원본 셀 매칭 시 줄바꿈/공백 정규화 + 실패 시 warning 반환)으로 함께 올려야 의미가 있음.) -->
+<!-- 시험 스케줄 관리 시스템 V1.29.0 (관리자 외 회원: 자동계획 수립/마스터 반영 중복 정리/메모 회의록/휴일 등록 메뉴 숨김) (V1.27.0: 좌측 패널 근태 등록 추가 — 뷰어 권한자도 본인 근태 편집 가능, 캘린더/타임라인 배광1호 위에 근태 표시) (V1.27.1: 달의 마지막 날/주의 마지막 칸에 시작하는 일정이 타임라인·캘린더에서 안 보이던 타임존 버그 수정) (V1.27.2: 모바일 공간 확보를 위해 타임라인뷰 상단 안내 문구 제거) (V1.28.0: 일정 상세 모달에 '결과 리뷰' 자유 텍스트 항목 추가) (V1.29.0: 수동 일정입력 시 환경UNIT 제외 장비의 주말/공휴일 포함 여부를 검증하여 경고 후 사용자가 저장여부 선택 가능하도록 개선) (V1.30.0: 관리자 전용 '🔀 밀어내기 후보 추천' 기능 추가 — ① 신규/지연 건이 자리가 없을 때 기존 일정을 순서대로 밀어내는 시뮬레이션과 변경 전/후 비교, ② 이미 계획된 일정 중 예정일이 너무 늦다는 요구로 당기거나(앞당기기) 기간을 단축해야 할 때도 같은 방식으로 뒤 일정을 밀어내는 시뮬레이션 지원(모드 전환). 지그 충돌 시 인접 일정과 순서를 바꿔보는 대안을 자동 탐색해 제안하며, 자동연동(마스터) 일정은 고정된 장애물로 처리해 밀 수 없음을 명확히 알림. 밀리거나 당겨지는 일정은 원래 차지하던 실제 시험일수(근무일)를 유지하도록 주말/공휴일을 감안해 새 위치의 달력기간을 재계산함(자동계획 수립과 동일 규칙: 환경UNIT 예외, 습기UNIT 전체구간 무휴일, 그 외 장비는 시험일수 기준 종료일 산정). 일괄 반영/되돌리기 이력 관리(기간 변경도 함께 원복)) (V1.31.0: 관리자 전용 — 캘린더뷰·타임라인뷰의 계획 막대에 마우스오버하면 '⏪ 당기기/단축' 단축 아이콘이 뜸. 클릭하면 오늘~현재 시작일 사이의 빈 자리(시험일수·지그 기준 검증됨)를 바로 골라 이동할 수 있고, 빈 자리가 없으면 자동으로 '🔀 밀어내기 후보 추천' 모달이 해당 일정이 선택된 상태로 열림) (V1.32.0: 🔒 업무현황 자동연동(마스터) 일정 양방향 동기화 — 편집 권한자는 마스터 일정도 편집 가능해지며, 저장 시 앱 자체 Schedules 시트가 아니라 원본 '시험계획표' 월별 탭 셀에 직접 반영됨(서버의 새 updateMasterSchedule 액션 필요, 별도 GAS 코드 참고). 내용만 수정한 경우 기존 셀의 음영은 유지, 날짜/기간/장비가 바뀌어 자리를 옮긴 경우에는 기존 셀을 비우고 새 위치에 앱 반영 표시용 고정 색상(인디고 계열, #c7d2fe)을 입힘) (V1.33.0: 🔒 마스터 일정에도 호버 단축 팝오버(진행상태 변경/당기기) 개방 — ① 진행상태는 '완료'/'진행' 두 가지만 지원(원본시트 파이프라인이 진행결과 칸에 '완료' 또는 공란만 인식하므로 '지연' 버튼은 마스터 항목에서 숨김, 서버의 새 updateMasterProgressStatus 액션이 월별 탭 진행결과 셀에 직접 반영), ② '당기기/단축'은 updateMasterSchedule 경로로 원본 셀에 반영(관리자 전용, 기존 권한 범위 동일). 추가로 타임라인뷰 막대 라벨을 마스터 일정에 한해 영문 추출 대신 제목(첫 줄) 전체로 표시.) (V1.34.0: 타임라인뷰 막대 라벨을 앱 등록 일정도 마스터와 동일하게 제목(첫 줄) 전체로 표시(영문 추출 방식 폐지). 앱에서 등록한 일정을 원본 '시험계획표' 월별 탭에 반영(pushToAppInput)할 때도 마스터 항목처럼 배경색을 입히되, 고정색이 아니라 항목마다 랜덤한(가독성 있는 밝기·채도 범위 내) 색상을 적용(서버 randomVisibleColor 참고).) (V1.35.0: ① 전체 일정/메모 모달의 세로 스크롤이 둥근 테두리를 뚫고 보이던 렌더링 버그 수정(헤더 고정 + 내부 스크롤 영역 분리). ② 메모/회의록 내용 입력을 리치텍스트로 전면 교체 — 굵게/밑줄/글자색/서식지우기, 표 삽입 및 행·열 추가삭제·표 전체삭제 지원. ③ 사이드 필터의 '장비'를 단일 선택에서 다중 선택 체크리스트로 전환. ④ '📊 대시보드' 뷰 신규 추가 — Chart.js 기반으로 연도별/월별 계획건수 추이, 시험기별·차종별·품목별(TOP10) 계획건수, 진행상태 분포(완료율·변경건수 포함 KPI 카드)를 좌측 필터와 연동해 시각화.) (V1.35.1: 🔒 마스터 일정 저장/당기기 시 서버(GAS V1.21.0)가 원본 시트에서 기존 셀을 못 찾아 못 지운 경우 warning을 반환하도록 바뀐 것에 맞춰, 그 warning을 토스트로 노출하도록 수정. 이 클라이언트 변경은 GAS 쪽도 V1.21.0(원본 셀 매칭 시 줄바꿈/공백 정규화 + 실패 시 warning 반환)으로 함께 올려야 의미가 있음.) (V1.36.0: 🔀 밀어내기 후보 추천에서 🔒 자동연동(마스터) 일정도 조정 대상으로 포함 — V1.32.0에서 마스터 일정 자체 편집은 이미 가능해졌으나 이 기능만 여전히 "고정된 장애물"로 취급해 막고 있던 것을 수정. 대상 선택 드롭다운에서 마스터 일정 비활성화(disabled) 해제, 밀림 연쇄 계산(computeReflowCascade)에서 마스터 일정도 일반 일정과 동일한 근무일 규칙으로 새 위치를 재계산, 지그 충돌 시 순서 교체 대안(findReflowSwapAlternative)에서도 마스터 일정을 파트너 후보로 포함. 결과 화면에 🔒 표시로 마스터 일정임을 구분하고, 일괄 반영/되돌리기 시 마스터 항목은 saveSchedule이 아니라 updateMasterSchedule 경로로 원본 '시험계획표' 시트에 직접 반영(반영 후 셀 위치가 바뀔 수 있어 전체 재로딩으로 동기화). GAS 코드 변경 불필요(기존 updateMasterSchedule 액션 재사용).) -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -115,7 +115,7 @@
     <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-[11px] text-amber-800 leading-relaxed my-5 space-y-1">
       <p class="font-bold">📋 설치 순서</p>
       <p>1. 새 구글 스프레드시트 생성 → 확장 프로그램 → Apps Script</p>
-      <p>2. 함께 전달드린 <b>gas_code_V1.15.0.gs</b> 코드 전체를 붙여넣기</p>
+      <p>2. 함께 전달드린 <b>gas_code_V1.21.0.gs</b> 코드 전체를 붙여넣기</p>
       <p>3. 배포 → 새 배포 → 웹 앱 (실행: 나, 액세스: 전체) → 배포</p>
       <p>4. 발급된 웹 앱 URL을 아래에 붙여넣고 연결하세요</p>
     </div>
@@ -169,7 +169,7 @@
       <div class="bg-indigo-600 p-3 rounded-2xl shadow-lg"><span class="text-white text-2xl">🧪</span></div>
       <div class="min-w-0">
         <h1 class="text-lg sm:text-2xl font-bold text-slate-800 flex items-center flex-wrap gap-2">시험 스케줄 관리 시스템
-          <span class="text-xs font-normal bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">V1.29.0</span>
+          <span class="text-xs font-normal bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">V1.36.0</span>
         </h1>
         <p class="text-xs sm:text-sm text-indigo-500 font-medium">구글시트 연동 · 🔒 업무현황 자동반영</p>
       </div>
@@ -609,7 +609,7 @@
       <div id="reflow-existing-fields" class="hidden space-y-1">
         <label class="field-label">대상 일정 (당기거나 단축할 기존 일정)</label>
         <select id="reflow-existing-select" onchange="onReflowExistingSelectChange()" class="field-input"></select>
-        <p class="text-[10px] text-slate-400 font-semibold">🔒 표시된 일정은 자동연동(마스터) 일정이라 이 기능으로 조정할 수 없습니다.</p>
+        <p class="text-[10px] text-slate-400 font-semibold">🔒 표시된 일정은 자동연동(마스터) 일정입니다 — 이 기능으로 조정하면 원본 '시험계획표' 시트에 직접 반영됩니다.</p>
       </div>
 
       <div class="grid grid-cols-2 gap-3">
@@ -1771,7 +1771,8 @@ function onReflowEqChange(){
   if (reflowMode==='existing') populateReflowExistingSelect();
 }
 
-// 선택된 장비의 (마스터 제외) 기존 일정들을 골라, 당기거나 단축할 대상으로 선택하게 함
+// 선택된 장비의 기존 일정들을 골라, 당기거나 단축할 대상으로 선택하게 함
+// (자동연동 마스터 일정도 V1.32.0부터 편집 권한자가 조정 가능하므로 선택 가능 — 🔒 표시만 유지)
 function populateReflowExistingSelect(){
   const eqId = document.getElementById('reflow-eq').value;
   const sel = document.getElementById('reflow-existing-select');
@@ -1780,7 +1781,7 @@ function populateReflowExistingSelect(){
     .sort((a,b)=> parseLocalDate(a.startDate) - parseLocalDate(b.startDate));
   sel.innerHTML = list.map(s=>{
     const locked = isMasterSchedule(s);
-    return `<option value="${s.id}" ${locked?'disabled':''}>${locked?'🔒 ':''}${s.title} (${s.startDate}, ${s.duration}일)</option>`;
+    return `<option value="${s.id}">${locked?'🔒 ':''}${s.title} (${s.startDate}, ${s.duration}일)</option>`;
   }).join('');
   onReflowExistingSelectChange();
 }
@@ -1796,14 +1797,14 @@ function onReflowExistingSelectChange(){
 // orderList 순서대로 처리하며, 새 건이 차지하는 구간 뒤로 순차적으로 밀어낸다 (기간이 서로 달라도
 // 각 항목이 자기 duration만큼만 자리를 차지하므로 자연스럽게 처리됨). 실제 schedules는 건드리지 않고
 // 로컬 pool에서만 시뮬레이션한다.
-// 주의: '시험계획누적'에서 자동연동된 마스터 일정(source==='master')은 서버(handleSaveSchedule)가
-// 애초에 수정을 차단하므로 밀어낼 수 없다 — 고정된 장애물로 취급하고, 커서가 그 구간과 겹쳐야만
-// 하는 상황이 오면 blockedByMaster를 반환해 "이 조합으로는 자리를 만들 수 없다"는 것을 알린다.
+// 주의: '시험계획누적'에서 자동연동된 마스터 일정(source==='master')도 V1.32.0부터 편집 권한자가
+// 조정 가능해졌으므로(저장 시 updateMasterSchedule 경로로 원본 시트에 반영), 일반 일정과 동일하게
+// 밀어낼 수 있다. changes 항목에는 isMaster 플래그를 함께 기록해, 일괄 반영 시 저장 경로(saveSchedule
+// vs updateMasterSchedule)를 구분할 수 있게 한다.
 function computeReflowCascade(orderList, desiredStart, duration){
   const simPool = schedules.filter(s=>s.status!=='deleted').map(s=>({...s}));
   let cursor = reflowAddDays(desiredStart, duration);
   const changes = [];
-  let blockedByMaster = null;
   for (const orig of orderList){
     const origStart = parseLocalDate(orig.startDate);
     if (origStart < desiredStart) continue; // 새 건 이전 일정은 영향 없음
@@ -1812,16 +1813,6 @@ function computeReflowCascade(orderList, desiredStart, duration){
     const curStart = parseLocalDate(simPool[idx].startDate);
     const curDuration = parseInt(simPool[idx].duration)||1;
     const rawNeededStart = curStart < cursor ? new Date(cursor) : curStart;
-
-    if (isMasterSchedule(orig)){
-      if (rawNeededStart.getTime() !== curStart.getTime()){
-        // 자동연동 마스터 일정은 고정이라 밀 수 없음 → 이 조합은 성립하지 않음
-        blockedByMaster = { schedule: orig, requiredStart: fmtISO(rawNeededStart) };
-        break;
-      }
-      cursor = reflowAddDays(curStart, curDuration); // 이동은 없지만 고정 구간만큼 커서는 전진
-      continue; // changes에는 기록하지 않음 (이동한 게 아니므로)
-    }
 
     if (rawNeededStart.getTime() !== curStart.getTime()){
       // 실제로 밀림 → 원래 차지하던 '근무일(시험일)' 수는 유지하고, 새 위치에서 주말/공휴일을
@@ -1835,25 +1826,24 @@ function computeReflowCascade(orderList, desiredStart, duration){
       const jig = findJigConflictsInPool(probe, orig.id, poolForCheck);
       changes.push({ schedule: orig, oldStart: orig.startDate, oldDuration: curDuration,
         newStart: newStartStr, newDuration: placed.duration,
-        pushedDays: Math.round((placed.start-curStart)/86400000), jig });
+        pushedDays: Math.round((placed.start-curStart)/86400000), jig, isMaster: isMasterSchedule(orig) });
       simPool[idx] = probe;
       cursor = reflowAddDays(placed.start, placed.duration);
     } else {
       cursor = reflowAddDays(curStart, curDuration);
     }
   }
-  return { changes, blockedByMaster };
+  return { changes };
 }
 
 // 지그 충돌이 난 항목을 뒤 순서의 항목 1~3개와 바꿔가며 시도하고, 지그 충돌이 전부 사라지면서
-// 전체적으로 가장 적게 밀리는 조합을 고른다 (마스터 일정은 밀 수 없으므로 파트너 후보에서 제외)
+// 전체적으로 가장 적게 밀리는 조합을 고른다 (마스터 일정도 이제 밀 수 있으므로 파트너 후보에 포함)
 function findReflowSwapAlternative(ordered, desiredStart, duration, conflictId){
   const i = ordered.findIndex(s=>sameId(s.id, conflictId));
   if (i===-1) return null;
   const candidates = [];
   for (let k=1; k<=3; k++){
     if (i+k >= ordered.length) break;
-    if (isMasterSchedule(ordered[i+k])) continue; // 고정 일정과는 순서를 바꿀 수 없음
     const moved = ordered.slice();
     const [it] = moved.splice(i,1);
     moved.splice(i+k,0,it);
@@ -1862,7 +1852,6 @@ function findReflowSwapAlternative(ordered, desiredStart, duration, conflictId){
   let best = null, viableCount = 0;
   for (const cand of candidates){
     const result = computeReflowCascade(cand.order, desiredStart, duration);
-    if (result.blockedByMaster) continue;
     if (result.changes.some(c=>c.jig)) continue;
     viableCount++;
     const totalImpact = result.changes.reduce((sum,c)=>sum+c.pushedDays,0);
@@ -1883,7 +1872,7 @@ function runReflowSimulation(){
   }
   const eq = getEq(eqId);
 
-  let title, excludeId = null, oldStart = null, oldDuration = null, scheduleId = null, mode = 'create', vehicle, item;
+  let title, excludeId = null, oldStart = null, oldDuration = null, scheduleId = null, mode = 'create', vehicle, item, isMasterTarget = false;
   if (reflowMode === 'existing'){
     const targetId = document.getElementById('reflow-existing-select').value;
     const target = schedules.find(s=>sameId(s.id, targetId));
@@ -1891,12 +1880,8 @@ function runReflowSimulation(){
       document.getElementById('reflow-status').textContent = '당기거나 단축할 기존 일정을 선택해주세요.';
       return;
     }
-    if (isMasterSchedule(target)){
-      document.getElementById('reflow-status').textContent = '자동연동(마스터) 일정은 이 기능으로 조정할 수 없습니다.';
-      return;
-    }
     title = target.title; excludeId = target.id; scheduleId = target.id; mode = 'move';
-    oldStart = target.startDate; oldDuration = target.duration;
+    oldStart = target.startDate; oldDuration = target.duration; isMasterTarget = isMasterSchedule(target);
   } else {
     vehicle = document.getElementById('reflow-vehicle').value.trim();
     item = document.getElementById('reflow-item').value.trim();
@@ -1916,7 +1901,7 @@ function runReflowSimulation(){
   const startStrActual = fmtISO(desiredStart);
 
   const ni = { mode, scheduleId, title, vehicle, item, eqId, requestedTestDays,
-    start: startStrActual, duration, oldStart, oldDuration,
+    start: startStrActual, duration, oldStart, oldDuration, isMasterTarget,
     snapped: startStrActual !== startStr };
 
   const eqSchedules = schedules.filter(s=>s.eqId===eqId && s.status!=='deleted' && !sameId(s.id, excludeId))
@@ -1938,8 +1923,7 @@ function runReflowSimulation(){
   result.changes.forEach(c=>{
     if (c.jig) c.alternative = findReflowSwapAlternative(eqSchedules, desiredStart, duration, c.schedule.id);
   });
-  renderReflowResult({ changes: result.changes, blockedByMaster: result.blockedByMaster,
-    newItem: ni, directConflicts: [] });
+  renderReflowResult({ changes: result.changes, newItem: ni, directConflicts: [] });
 }
 
 function renderReflowResult(res){
@@ -1951,20 +1935,6 @@ function renderReflowResult(res){
   const noChange = document.getElementById('reflow-no-change');
   const applyBtn = document.getElementById('reflow-apply-btn');
   nearList.innerHTML = ''; farList.innerHTML = '';
-
-  if (res.blockedByMaster){
-    const bm = res.blockedByMaster;
-    const eq = getEq(bm.schedule.eqId);
-    nearList.insertAdjacentHTML('beforeend', `
-      <div class="bg-slate-100 border border-slate-200 rounded-xl p-3 text-xs">
-        <div class="font-bold text-slate-700">🔒 ${bm.schedule.title} · ${eq?eq.icon:''} ${eq?eq.name:''} (${bm.schedule.startDate}, ${bm.schedule.duration}일)</div>
-        <div class="text-slate-500 mt-1">이 일정은 '시험계획누적'에서 자동연동된 마스터 일정이라 앱에서 밀 수 없습니다. ${bm.requiredStart}부터 자리를 만들어야 하는데, 이 조합으로는 불가능합니다 — 희망 시작일을 늦추거나 다른 장비를 시도해주세요.</div>
-      </div>`);
-    farWrap.classList.add('hidden');
-    noChange.classList.add('hidden');
-    applyBtn.classList.add('hidden');
-    return;
-  }
   applyBtn.classList.remove('hidden');
 
   const ni = res.newItem;
@@ -1976,9 +1946,10 @@ function renderReflowResult(res){
   const selfReasonHtml = niConflict ? `<textarea class="field-input mt-2 !text-[11px] resize-none" id="reflow-self-jig-reason" rows="2" placeholder="지그 중복인 채로 진행하는 사유 (예: 지그 1개 임시 대여 예정)"></textarea>` : '';
   const selfCardHtml = ni.mode==='move' ? `
     <div class="bg-sky-50 border border-sky-100 rounded-xl p-3 text-xs">
-      <div class="font-bold text-sky-700">🔁 조정 · ${ni.title} · ${eq?eq.icon:''} ${eq?eq.name:''}</div>
+      <div class="font-bold text-sky-700">${ni.isMasterTarget?'🔒 ':''}🔁 조정 · ${ni.title} · ${eq?eq.icon:''} ${eq?eq.name:''}</div>
       <div class="mt-1">${ni.oldStart}~${fmtISO(reflowEndDate(parseLocalDate(ni.oldStart), ni.oldDuration))} (${ni.oldDuration}일) <span class="text-slate-400">→</span>
         <b>${ni.start}~${fmtISO(reflowEndDate(parseLocalDate(ni.start), ni.duration))} (${ni.duration}일)</b></div>
+      ${ni.isMasterTarget ? `<div class="text-slate-400 mt-1">🔒 자동연동(마스터) 일정 — 반영 시 원본 '시험계획표' 시트에 직접 반영됩니다.</div>` : ''}
       ${workdayNote}
       ${niConflict ? `<div class="text-rose-600 font-bold mt-1">⚠️ 동일 차종·품목이 같은 기간에 이미 ${res.directConflicts[0].conflicts.length}건 있습니다 — 지그 부족 가능성이 있어 반영 전 확인이 필요합니다.</div>` : ''}
       ${selfReasonHtml}
@@ -2021,12 +1992,13 @@ function reflowChangeRowHtml(c, detailed){
   const s = c.schedule;
   const eq = getEq(s.eqId);
   const hasJig = !!c.jig;
+  const isMaster = !!c.isMaster;
   const durationChanged = c.oldDuration !== c.newDuration;
   const oldEnd = fmtISO(reflowEndDate(parseLocalDate(c.oldStart), c.oldDuration));
   const newEnd = fmtISO(reflowEndDate(parseLocalDate(c.newStart), c.newDuration));
   if (!detailed){
     return `<div class="text-[11px] text-slate-500 flex items-center justify-between py-1">
-      <span>${s.title} · ${eq?eq.name:''}</span>
+      <span>${isMaster?'🔒 ':''}${s.title} · ${eq?eq.name:''}</span>
       <span>${c.oldStart} → ${c.newStart} (+${c.pushedDays}일)${durationChanged?` · ${c.oldDuration}→${c.newDuration}일`:''}${hasJig?' ⚠️':''}</span>
     </div>`;
   }
@@ -2036,9 +2008,10 @@ function reflowChangeRowHtml(c, detailed){
       <input type="checkbox" class="mt-0.5 reflow-change-check" data-id="${s.id}" ${hasJig?'':'checked'}>
       <div class="flex-1">
         <div class="flex items-center justify-between font-bold ${hasJig?'text-rose-700':'text-slate-700'}">
-          <span>${s.title} <span class="font-normal text-slate-400">· ${eq?eq.icon:''} ${eq?eq.name:''}</span></span>
+          <span>${isMaster?'🔒 ':''}${s.title} <span class="font-normal text-slate-400">· ${eq?eq.icon:''} ${eq?eq.name:''}</span></span>
           <span>${c.oldStart}~${oldEnd} (${c.oldDuration}일) <span class="text-slate-400">→</span> ${c.newStart}~${newEnd} (${c.newDuration}일) <span class="text-slate-400">(+${c.pushedDays}일)</span></span>
         </div>
+        ${isMaster ? `<div class="text-slate-400 mt-1">🔒 자동연동(마스터) 일정 — 반영 시 원본 '시험계획표' 시트에 직접 반영됩니다.</div>` : ''}
         ${durationChanged ? `<div class="text-slate-400 mt-1">주말/공휴일을 피해 새 위치에 배치하면서 달력상 기간이 ${c.oldDuration}일 → ${c.newDuration}일로 바뀝니다(시험일수는 동일하게 유지).</div>` : ''}
         ${hasJig ? `<div class="text-rose-600 font-bold mt-1">⚠️ 이동하면 동일 차종·품목 지그가 같은 기간에 ${c.jig.conflicts.length+1}건 겹칩니다 — 직접 확인 후 포함해주세요.</div>` : ''}
         ${hasJig && c.alternative ? `
@@ -2101,6 +2074,7 @@ async function confirmReflowBatch(){
   const batchId = 'RB' + reflowBatchCounter;
   const batchItems = [];
   const saveTasks = [];
+  let anyMasterInvolved = false;
 
   reflowState.changes.forEach(c=>{
     if (!includedIds.has(String(c.schedule.id))) return;
@@ -2113,14 +2087,23 @@ async function confirmReflowBatch(){
 
     const ta = document.querySelector(`.reflow-jig-reason[data-id="${before.id}"]`);
     const reason = ta ? ta.value.trim() : '';
+    const masterItem = isMasterSchedule(before);
+    if (masterItem) anyMasterInvolved = true;
     saveTasks.push(async ()=>{
       try {
-        const res = await gasPost('saveSchedule', { schedule: updated });
-        if (res.status!=='success') throw new Error(res.message||'저장 실패');
-        const diff = summarizeChanges(before, updated);
-        if (diff) logScheduleHistory(updated.id, updated.title,
-          diff.oldSummary + (reason?` (밀어내기 후보 추천 반영, 사유: ${reason})`:' (밀어내기 후보 추천 반영)'),
-          diff.newSummary, reason);
+        if (masterItem){
+          // 🔒 자동연동(마스터) 일정: 앱 자체 Schedules 시트가 아니라 원본 시트 셀에 직접 반영 (V1.32.0 경로 재사용)
+          const res = await gasPost('updateMasterSchedule', { schedule: updated, original: before });
+          if (res.status!=='success') throw new Error(res.message||'반영 실패');
+          if (res.warning) showToast(`⚠️ ${res.warning}`);
+        } else {
+          const res = await gasPost('saveSchedule', { schedule: updated });
+          if (res.status!=='success') throw new Error(res.message||'저장 실패');
+          const diff = summarizeChanges(before, updated);
+          if (diff) logScheduleHistory(updated.id, updated.title,
+            diff.oldSummary + (reason?` (밀어내기 후보 추천 반영, 사유: ${reason})`:' (밀어내기 후보 추천 반영)'),
+            diff.newSummary, reason);
+        }
       } catch(e){
         const revertIdx = schedules.findIndex(s=>sameId(s.id, before.id));
         if (revertIdx>-1) schedules[revertIdx] = before;
@@ -2137,14 +2120,22 @@ async function confirmReflowBatch(){
       const updated = { ...before, startDate: ni.start, duration: ni.duration };
       schedules[idx] = updated;
       batchItems.push({ scheduleId: before.id, oldStart: ni.oldStart, newStart: ni.start, oldDuration: ni.oldDuration, newDuration: ni.duration });
+      const masterSelf = isMasterSchedule(before);
+      if (masterSelf) anyMasterInvolved = true;
       saveTasks.push(async ()=>{
         try {
-          const res = await gasPost('saveSchedule', { schedule: updated });
-          if (res.status!=='success') throw new Error(res.message||'저장 실패');
-          const diff = summarizeChanges(before, updated);
-          if (diff) logScheduleHistory(updated.id, updated.title,
-            diff.oldSummary + (selfReason?` (밀어내기 후보 추천 · 당기기/단축 반영, 사유: ${selfReason})`:' (밀어내기 후보 추천 · 당기기/단축 반영)'),
-            diff.newSummary, selfReason);
+          if (masterSelf){
+            const res = await gasPost('updateMasterSchedule', { schedule: updated, original: before });
+            if (res.status!=='success') throw new Error(res.message||'반영 실패');
+            if (res.warning) showToast(`⚠️ ${res.warning}`);
+          } else {
+            const res = await gasPost('saveSchedule', { schedule: updated });
+            if (res.status!=='success') throw new Error(res.message||'저장 실패');
+            const diff = summarizeChanges(before, updated);
+            if (diff) logScheduleHistory(updated.id, updated.title,
+              diff.oldSummary + (selfReason?` (밀어내기 후보 추천 · 당기기/단축 반영, 사유: ${selfReason})`:' (밀어내기 후보 추천 · 당기기/단축 반영)'),
+              diff.newSummary, selfReason);
+          }
         } catch(e){
           const revertIdx = schedules.findIndex(s=>sameId(s.id, before.id));
           if (revertIdx>-1) schedules[revertIdx] = before;
@@ -2175,7 +2166,13 @@ async function confirmReflowBatch(){
     : `밀어내기 후보 ${batchItems.length}건 + 신규 1건이 반영되었습니다.`);
 
   for (const task of saveTasks) await task();
-  renderCurrentView();
+
+  if (anyMasterInvolved){
+    // 마스터 일정은 원본 시트에 재생성되며 셀 위치(행 번호)가 바뀔 수 있어 전체 재로딩으로 동기화
+    await loadAllData();
+  } else {
+    renderCurrentView();
+  }
 
   reflowBatchLog.unshift({ id: batchId, items: batchItems, newItemId: newId, undone: false });
   renderReflowBatchLog();
@@ -2185,15 +2182,25 @@ async function undoReflowBatch(batchId){
   const batch = reflowBatchLog.find(b=>b.id===batchId);
   if (!batch || batch.undone) return;
   let skipped = 0;
+  let anyMasterInvolved = false;
   for (const it of batch.items){
     const idx = schedules.findIndex(s=>sameId(s.id, it.scheduleId));
     if (idx===-1) continue;
-    if (schedules[idx].startDate !== it.newStart || String(schedules[idx].duration) !== String(it.newDuration)){
+    const current = schedules[idx];
+    if (current.startDate !== it.newStart || String(current.duration) !== String(it.newDuration)){
       skipped++; continue; // 그 사이에 또 바뀐 경우 되돌리지 않음
     }
-    const before = { ...schedules[idx], startDate: it.oldStart, duration: it.oldDuration };
+    const before = { ...current, startDate: it.oldStart, duration: it.oldDuration };
     schedules[idx] = before;
-    try { await gasPost('saveSchedule', { schedule: before }); } catch(e){ /* 실패해도 화면은 되돌린 상태로 둠 */ }
+    try {
+      if (isMasterSchedule(current)){
+        anyMasterInvolved = true;
+        const res = await gasPost('updateMasterSchedule', { schedule: before, original: current });
+        if (res && res.warning) showToast(`⚠️ ${res.warning}`);
+      } else {
+        await gasPost('saveSchedule', { schedule: before });
+      }
+    } catch(e){ /* 실패해도 화면은 되돌린 상태로 둠 */ }
   }
   if (batch.newItemId){
     const niIdx = schedules.findIndex(s=>sameId(s.id, batch.newItemId));
@@ -2204,7 +2211,11 @@ async function undoReflowBatch(batchId){
   }
   batch.undone = true;
   batch.skippedNote = skipped>0 ? `${skipped}건은 이후 다시 변경되어 되돌리지 못했습니다.` : null;
-  renderCurrentView();
+  if (anyMasterInvolved){
+    await loadAllData(); // 마스터 일정은 재생성 시 셀 위치(행 번호)가 바뀔 수 있어 전체 재로딩
+  } else {
+    renderCurrentView();
+  }
   renderReflowBatchLog();
   showToast('일괄 반영을 되돌렸습니다.');
 }
