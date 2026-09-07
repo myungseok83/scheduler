@@ -671,13 +671,15 @@
 
 <!-- ===================== 모달: 특정일 전체 일정 목록 ===================== -->
 <div id="modal-daylist" class="modal-overlay">
-  <div class="glass-card bg-white w-full max-w-lg rounded-[32px] p-5 sm:p-8 max-h-[80vh] overflow-y-auto custom-scrollbar">
-    <div class="flex justify-between items-start mb-1">
+  <div class="glass-card bg-white w-full max-w-lg rounded-[32px] max-h-[80vh] overflow-hidden flex flex-col">
+    <div class="flex justify-between items-start px-5 sm:px-8 pt-5 sm:pt-8 mb-1 shrink-0">
       <h3 id="daylist-title" class="text-lg font-bold text-slate-800">일정 목록</h3>
       <button onclick="closeModal('modal-daylist')" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
     </div>
-    <p id="daylist-count" class="text-xs text-slate-400 font-semibold mb-5"></p>
-    <div id="daylist-items" class="space-y-2"></div>
+    <p id="daylist-count" class="text-xs text-slate-400 font-semibold px-5 sm:px-8 mb-3 shrink-0"></p>
+    <div class="overflow-y-auto custom-scrollbar px-5 sm:px-8 pb-5 sm:pb-8">
+      <div id="daylist-items" class="space-y-2"></div>
+    </div>
   </div>
 </div>
 
