@@ -62,6 +62,19 @@
   .field-label{font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;}
   .field-input{width:100%;padding:.65rem .8rem;background:#f8fafc;border-radius:.7rem;border:1px solid transparent;outline:none;font-weight:600;font-size:.85rem;transition:all .15s;}
   .field-input:focus{border-color:#a5b4fc;background:#fff;}
+  .rte-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:6px;background:#f1f5f9;border-radius:.7rem .7rem 0 0;border:1px solid transparent;border-bottom:1px solid #e2e8f0;}
+  .rte-btn{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:.5rem;font-size:12px;font-weight:800;color:#475569;background:transparent;cursor:pointer;transition:all .1s;}
+  .rte-btn:hover{background:#e2e8f0;}
+  .rte-color-swatch{width:18px;height:18px;border-radius:5px;cursor:pointer;border:1px solid rgba(0,0,0,.1);}
+  .rte-num-input{width:34px;padding:.3rem;border-radius:.4rem;border:1px solid #e2e8f0;font-size:11px;font-weight:700;text-align:center;background:#fff;}
+  .rte-sep{width:1px;align-self:stretch;background:#e2e8f0;margin:2px 2px;}
+  #memo-content[contenteditable]{width:100%;min-height:110px;max-height:260px;overflow-y:auto;padding:.65rem .8rem;background:#f8fafc;border-radius:0 0 .7rem .7rem;border:1px solid transparent;outline:none;font-weight:600;font-size:.85rem;line-height:1.5;transition:all .15s;}
+  #memo-content[contenteditable]:focus{border-color:#a5b4fc;background:#fff;}
+  #memo-content[contenteditable]:empty:before{content:attr(data-placeholder);color:#94a3b8;font-weight:600;}
+  .memo-rte-table{border-collapse:collapse;margin:6px 0;}
+  .memo-rte-table td{border:1px solid #cbd5e1;padding:4px 8px;min-width:40px;}
+  .memo-rich-content table{border-collapse:collapse;margin:6px 0;}
+  .memo-rich-content td{border:1px solid #cbd5e1;padding:4px 8px;}
 </style>
 </head>
 <body class="min-h-screen p-4 md:p-8">
@@ -614,7 +627,27 @@
           </div>
         </div>
         <label class="field-label">내용</label>
-        <textarea id="memo-content" rows="5" class="field-input resize-none mb-2" placeholder="회의 내용, 결정사항, 특이사항 등을 자유롭게 적어주세요. (이미지는 Ctrl+V로 붙여넣을 수 있어요)"></textarea>
+        <div class="mb-2">
+          <div class="rte-toolbar">
+            <button type="button" title="굵게" onmousedown="event.preventDefault()" onclick="memoRte('bold')" class="rte-btn" style="font-weight:900;">B</button>
+            <button type="button" title="밑줄" onmousedown="event.preventDefault()" onclick="memoRte('underline')" class="rte-btn" style="text-decoration:underline;">U</button>
+            <div class="rte-sep"></div>
+            <button type="button" title="검정" onmousedown="event.preventDefault()" onclick="memoRte('foreColor','#0f172a')" class="rte-color-swatch" style="background:#0f172a;"></button>
+            <button type="button" title="빨강" onmousedown="event.preventDefault()" onclick="memoRte('foreColor','#e11d48')" class="rte-color-swatch" style="background:#e11d48;"></button>
+            <button type="button" title="파랑" onmousedown="event.preventDefault()" onclick="memoRte('foreColor','#2563eb')" class="rte-color-swatch" style="background:#2563eb;"></button>
+            <button type="button" title="초록" onmousedown="event.preventDefault()" onclick="memoRte('foreColor','#059669')" class="rte-color-swatch" style="background:#059669;"></button>
+            <button type="button" title="주황" onmousedown="event.preventDefault()" onclick="memoRte('foreColor','#ea580c')" class="rte-color-swatch" style="background:#ea580c;"></button>
+            <input type="color" id="memo-color-custom" title="색상 직접 선택" onmousedown="event.preventDefault()" oninput="memoRte('foreColor', this.value)" class="w-[18px] h-[18px] p-0 border-0 rounded cursor-pointer" style="background:none;">
+            <div class="rte-sep"></div>
+            <button type="button" title="서식 지우기" onmousedown="event.preventDefault()" onclick="memoRte('removeFormat')" class="rte-btn" style="font-weight:700;font-size:10px;">Tx</button>
+            <div class="rte-sep"></div>
+            <input type="number" id="memo-table-rows" value="3" min="1" max="20" title="행 수" class="rte-num-input">
+            <span class="text-[10px] text-slate-400 font-bold">×</span>
+            <input type="number" id="memo-table-cols" value="3" min="1" max="10" title="열 수" class="rte-num-input">
+            <button type="button" title="표 삽입" onmousedown="event.preventDefault()" onclick="insertMemoTable()" class="rte-btn" style="width:auto;padding:0 8px;">🔳 표</button>
+          </div>
+          <div id="memo-content" contenteditable="true" data-placeholder="회의 내용, 결정사항, 특이사항 등을 자유롭게 적어주세요. (이미지는 Ctrl+V로 붙여넣을 수 있어요)"></div>
+        </div>
 
         <label class="field-label">이미지 첨부</label>
         <div id="memo-image-dropzone" tabindex="0" class="border-2 border-dashed border-slate-200 rounded-xl p-3 mb-2 text-center text-[11px] text-slate-400 font-semibold cursor-text hover:border-amber-300 hover:bg-amber-50/50 transition-all focus:outline-none focus:border-amber-400 focus:bg-amber-50/50">
@@ -4228,10 +4261,36 @@ function moveMemoDate(n){
   loadMemosForSelectedDate();
 }
 
+/* ---------- 메모 리치 텍스트 서식 ---------- */
+function memoRte(cmd, value){
+  document.getElementById('memo-content').focus();
+  document.execCommand(cmd, false, value || null);
+}
+
+function insertMemoTable(){
+  let rows = parseInt(document.getElementById('memo-table-rows').value, 10) || 3;
+  let cols = parseInt(document.getElementById('memo-table-cols').value, 10) || 3;
+  rows = Math.min(Math.max(rows, 1), 20);
+  cols = Math.min(Math.max(cols, 1), 10);
+  let html = '<table class="memo-rte-table"><tbody>';
+  for (let i=0;i<rows;i++){
+    html += '<tr>' + '<td>&nbsp;</td>'.repeat(cols) + '</tr>';
+  }
+  html += '</tbody></table><p><br></p>';
+  document.getElementById('memo-content').focus();
+  document.execCommand('insertHTML', false, html);
+}
+
+function stripHtml(html){
+  const d = document.createElement('div');
+  d.innerHTML = html || '';
+  return d.textContent || d.innerText || '';
+}
+
 function resetMemoForm(){
   document.getElementById('memo-id').value = '';
   document.getElementById('memo-title').value = '';
-  document.getElementById('memo-content').value = '';
+  document.getElementById('memo-content').innerHTML = '';
   document.getElementById('memo-category').value = memoCategories[0] ? memoCategories[0].name : '';
   document.getElementById('memo-cancel-edit-btn').classList.add('hidden');
   pendingMemoImages = [];
@@ -4403,7 +4462,7 @@ function renderMemoCard(m){
             <button onclick="deleteMemoEntry('${m.id}')" class="text-slate-400 hover:text-rose-500 text-xs">🗑️</button>
           </div>
         </div>
-        <p class="text-xs text-slate-600 mt-1 whitespace-pre-wrap">${m.content||''}</p>
+        <div class="text-xs text-slate-600 mt-1 memo-rich-content">${m.content||''}</div>
         ${imagesHtml}
         <p class="text-[10px] text-slate-400 mt-2">${m.createdBy||''} · ${(m.updatedAt||m.createdAt||'').replace('T',' ').slice(0,16)}</p>
       </div>`;
@@ -4414,7 +4473,7 @@ function editMemoEntry(m){
   document.getElementById('memo-date-picker').value = m.date;
   document.getElementById('memo-id').value = m.id;
   document.getElementById('memo-title').value = m.title;
-  document.getElementById('memo-content').value = m.content || '';
+  document.getElementById('memo-content').innerHTML = m.content || '';
   document.getElementById('memo-category').value = m.category || '회의록';
   document.getElementById('memo-cancel-edit-btn').classList.remove('hidden');
   try { existingMemoImageUrls = JSON.parse(m.images || '[]'); } catch(e){ existingMemoImageUrls = []; }
@@ -4442,7 +4501,7 @@ async function saveMemoEntry(){
     id: document.getElementById('memo-id').value || null,
     date: document.getElementById('memo-date-picker').value,
     title,
-    content: document.getElementById('memo-content').value.trim(),
+    content: document.getElementById('memo-content').innerHTML.trim(),
     category: document.getElementById('memo-category').value,
     images,
     createdBy: currentUser.username
@@ -4606,7 +4665,7 @@ function renderAllMemosList(){
   const filtered = allMemosCache.filter(m => {
     if (memoCategoryFilter!=='all' && (m.category||'기타')!==memoCategoryFilter) return false;
     if (!q) return true;
-    return (m.title||'').toLowerCase().includes(q) || (m.content||'').toLowerCase().includes(q);
+    return (m.title||'').toLowerCase().includes(q) || stripHtml(m.content).toLowerCase().includes(q);
   });
   if (filtered.length===0){ listEl.innerHTML = `<p class="text-xs text-slate-400">해당하는 메모가 없습니다.</p>`; return; }
 
