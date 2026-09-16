@@ -13,7 +13,13 @@
 data/options만 갱신 후 update('none')으로 무애니메이션 즉시 반영, (c) 연도·월·장비·상태·차종·품목별
 집계와 이번달/변경건수/완료건수 계산을 위해 목록을 9번 순회하던 것을 한 번의 순회로 통합(차종·품목
 파싱도 항목당 1회로 축소), (d) 연도 필터 select는 실제 연도 구성이 바뀔 때만 다시 그리도록 변경. ④
-대시보드에 '⚠️ 미입고 건수' KPI 카드와 '⚠️ 미입고 현황(장비별)' 막대 차트 추가.) -->
+대시보드에 '⚠️ 미입고 건수' KPI 카드와 '⚠️ 미입고 현황(장비별)' 막대 차트 추가.) (V1.52.0: 🤖 자동계획 수립·🔀
+밀어내기 후보 추천·📝 메모/회의록 모달을 화면 중앙을 가리는 방식에서, 자동계획 수립에 이미 쓰이던
+것과 같은 방식(배경 비차단, 클릭도 그대로 통과)으로 좌측 사이드패널 쪽(좌상단)에 떠서 열리도록 변경 —
+이 세 기능을 쓰는 동안에도 뒤의 달력·타임라인이 계속 보이고 조작 가능함. 자동계획 수립은 기존 우하단
+배치에서 좌상단으로 위치만 이동(기능 동일), 밀어내기 후보 추천·메모/회의록은 화면을 가리던 완전
+차단형 모달에서 이 방식으로 전환. 메모/회의록 모달은 헤더 고정+내부 스크롤 분리 구조(V1.35.0)를
+유지해야 해서 CSS 우선순위를 별도로 지정해 기존 레이아웃이 깨지지 않도록 함.) -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -71,6 +77,17 @@ data/options만 갱신 후 update('none')으로 무애니메이션 즉시 반영
     .modal-overlay.modal-float{padding:0;justify-content:center;}
     .modal-overlay.modal-float > .glass-card{width:100%;max-width:100%;border-radius:24px 24px 0 0;max-height:72vh;}
   }
+  /* V1.52.0: 자동계획 수립/밀어내기 후보 추천/메모·회의록 전용 — 좌측 사이드패널 위쪽에 떠서 열리도록 하여
+     뒤의 달력·타임라인을 계속 보면서 확인/조작할 수 있게 함(modal-float와 동일한 방식, 앵커 위치만 좌상단). */
+  .modal-overlay.modal-float-left{background:transparent;pointer-events:none;align-items:flex-start;justify-content:flex-start;}
+  .modal-overlay.modal-float-left > .glass-card{pointer-events:auto;box-shadow:0 20px 60px -8px rgba(15,23,42,.35);max-height:calc(100vh - 2rem);overflow-y:auto;}
+  @media (max-width:640px){
+    .modal-overlay.modal-float-left{padding:0;justify-content:center;}
+    .modal-overlay.modal-float-left > .glass-card{width:100%;max-width:100%;border-radius:24px 24px 0 0;max-height:72vh;}
+  }
+  /* 메모/회의록 모달은 헤더 고정 + 내부 스크롤 영역 분리 구조(V1.35.0)라 자체 overflow:hidden을
+     유지해야 함 — 위 공용 규칙(overflow-y:auto)에 덮이지 않도록 ID로 다시 우선 지정 */
+  #modal-memo.modal-overlay.modal-float-left > .glass-card{overflow:hidden;max-height:85vh;}
   .toast{position:fixed;bottom:24px;right:24px;background:#0f172a;color:#fff;padding:12px 20px;border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,.25);z-index:3500;font-size:13px;font-weight:600;transform:translateY(20px);opacity:0;transition:all .3s;}
   .toast.show{transform:translateY(0);opacity:1;}
   .tab-btn{padding:.6rem 1.4rem;border-radius:.75rem;font-size:.85rem;font-weight:700;color:#64748b;transition:all .15s;}
@@ -688,7 +705,7 @@ data/options만 갱신 후 update('none')으로 무애니메이션 즉시 반영
 </div>
 
 <!-- ===================== 모달: 자동계획 수립 1단계 (기본정보) ===================== -->
-<div id="modal-auto1" class="modal-overlay modal-float">
+<div id="modal-auto1" class="modal-overlay modal-float-left">
   <div class="glass-card bg-white w-full max-w-md rounded-[32px] p-5 sm:p-8">
     <div class="flex justify-between items-start mb-1">
       <h3 class="text-lg font-bold text-slate-800">🤖 자동계획 수립 · 1/2</h3>
@@ -720,7 +737,7 @@ data/options만 갱신 후 update('none')으로 무애니메이션 즉시 반영
 </div>
 
 <!-- ===================== 모달: 자동계획 수립 2단계 (일정정보 + 결과) ===================== -->
-<div id="modal-auto2" class="modal-overlay modal-float">
+<div id="modal-auto2" class="modal-overlay modal-float-left">
   <div class="glass-card bg-white w-full max-w-md rounded-[32px] p-5 sm:p-8">
     <div class="flex justify-between items-start mb-1">
       <h3 class="text-lg font-bold text-slate-800">🤖 자동계획 수립 · 2/2</h3>
@@ -777,7 +794,7 @@ data/options만 갱신 후 update('none')으로 무애니메이션 즉시 반영
 </div>
 
 <!-- ===================== 모달: 밀어내기 후보 추천 (V1.30.0) ===================== -->
-<div id="modal-reflow" class="modal-overlay">
+<div id="modal-reflow" class="modal-overlay modal-float-left">
   <div class="glass-card bg-white w-full max-w-lg rounded-[32px] p-5 sm:p-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
     <div class="flex justify-between items-start mb-1">
       <h3 class="text-lg font-bold text-slate-800">🔀 밀어내기 후보 추천</h3>
@@ -861,7 +878,7 @@ data/options만 갱신 후 update('none')으로 무애니메이션 즉시 반영
 
 
 <!-- ===================== 모달: 메모 / 회의록 ===================== -->
-<div id="modal-memo" class="modal-overlay">
+<div id="modal-memo" class="modal-overlay modal-float-left">
   <div class="glass-card bg-white w-full max-w-lg rounded-[32px] max-h-[85vh] overflow-hidden flex flex-col">
     <div class="flex justify-between items-start px-5 sm:px-8 pt-5 sm:pt-8 mb-4 shrink-0">
       <h3 class="text-lg font-bold text-slate-800">📝 메모 / 회의록</h3>
