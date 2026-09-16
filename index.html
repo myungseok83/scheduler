@@ -1,5 +1,19 @@
 <!DOCTYPE html>
-<!-- 시험 스케줄 관리 시스템 V1.29.0 (관리자 외 회원: 자동계획 수립/마스터 반영 중복 정리/메모 회의록/휴일 등록 메뉴 숨김) (V1.27.0: 좌측 패널 근태 등록 추가 — 뷰어 권한자도 본인 근태 편집 가능, 캘린더/타임라인 배광1호 위에 근태 표시) (V1.27.1: 달의 마지막 날/주의 마지막 칸에 시작하는 일정이 타임라인·캘린더에서 안 보이던 타임존 버그 수정) (V1.27.2: 모바일 공간 확보를 위해 타임라인뷰 상단 안내 문구 제거) (V1.28.0: 일정 상세 모달에 '결과 리뷰' 자유 텍스트 항목 추가) (V1.29.0: 수동 일정입력 시 환경UNIT 제외 장비의 주말/공휴일 포함 여부를 검증하여 경고 후 사용자가 저장여부 선택 가능하도록 개선) (V1.30.0: 관리자 전용 '🔀 밀어내기 후보 추천' 기능 추가 — ① 신규/지연 건이 자리가 없을 때 기존 일정을 순서대로 밀어내는 시뮬레이션과 변경 전/후 비교, ② 이미 계획된 일정 중 예정일이 너무 늦다는 요구로 당기거나(앞당기기) 기간을 단축해야 할 때도 같은 방식으로 뒤 일정을 밀어내는 시뮬레이션 지원(모드 전환). 지그 충돌 시 인접 일정과 순서를 바꿔보는 대안을 자동 탐색해 제안하며, 자동연동(마스터) 일정은 고정된 장애물로 처리해 밀 수 없음을 명확히 알림. 밀리거나 당겨지는 일정은 원래 차지하던 실제 시험일수(근무일)를 유지하도록 주말/공휴일을 감안해 새 위치의 달력기간을 재계산함(자동계획 수립과 동일 규칙: 환경UNIT 예외, 습기UNIT 전체구간 무휴일, 그 외 장비는 시험일수 기준 종료일 산정). 일괄 반영/되돌리기 이력 관리(기간 변경도 함께 원복)) (V1.31.0: 관리자 전용 — 캘린더뷰·타임라인뷰의 계획 막대에 마우스오버하면 '⏪ 당기기/단축' 단축 아이콘이 뜸. 클릭하면 오늘~현재 시작일 사이의 빈 자리(시험일수·지그 기준 검증됨)를 바로 골라 이동할 수 있고, 빈 자리가 없으면 자동으로 '🔀 밀어내기 후보 추천' 모달이 해당 일정이 선택된 상태로 열림) (V1.32.0: 🔒 업무현황 자동연동(마스터) 일정 양방향 동기화 — 편집 권한자는 마스터 일정도 편집 가능해지며, 저장 시 앱 자체 Schedules 시트가 아니라 원본 '시험계획표' 월별 탭 셀에 직접 반영됨(서버의 새 updateMasterSchedule 액션 필요, 별도 GAS 코드 참고). 내용만 수정한 경우 기존 셀의 음영은 유지, 날짜/기간/장비가 바뀌어 자리를 옮긴 경우에는 기존 셀을 비우고 새 위치에 앱 반영 표시용 고정 색상(인디고 계열, #c7d2fe)을 입힘) (V1.33.0: 🔒 마스터 일정에도 호버 단축 팝오버(진행상태 변경/당기기) 개방 — ① 진행상태는 '완료'/'진행' 두 가지만 지원(원본시트 파이프라인이 진행결과 칸에 '완료' 또는 공란만 인식하므로 '지연' 버튼은 마스터 항목에서 숨김, 서버의 새 updateMasterProgressStatus 액션이 월별 탭 진행결과 셀에 직접 반영), ② '당기기/단축'은 updateMasterSchedule 경로로 원본 셀에 반영(관리자 전용, 기존 권한 범위 동일). 추가로 타임라인뷰 막대 라벨을 마스터 일정에 한해 영문 추출 대신 제목(첫 줄) 전체로 표시.) (V1.34.0: 타임라인뷰 막대 라벨을 앱 등록 일정도 마스터와 동일하게 제목(첫 줄) 전체로 표시(영문 추출 방식 폐지). 앱에서 등록한 일정을 원본 '시험계획표' 월별 탭에 반영(pushToAppInput)할 때도 마스터 항목처럼 배경색을 입히되, 고정색이 아니라 항목마다 랜덤한(가독성 있는 밝기·채도 범위 내) 색상을 적용(서버 randomVisibleColor 참고).) (V1.35.0: ① 전체 일정/메모 모달의 세로 스크롤이 둥근 테두리를 뚫고 보이던 렌더링 버그 수정(헤더 고정 + 내부 스크롤 영역 분리). ② 메모/회의록 내용 입력을 리치텍스트로 전면 교체 — 굵게/밑줄/글자색/서식지우기, 표 삽입 및 행·열 추가삭제·표 전체삭제 지원. ③ 사이드 필터의 '장비'를 단일 선택에서 다중 선택 체크리스트로 전환. ④ '📊 대시보드' 뷰 신규 추가 — Chart.js 기반으로 연도별/월별 계획건수 추이, 시험기별·차종별·품목별(TOP10) 계획건수, 진행상태 분포(완료율·변경건수 포함 KPI 카드)를 좌측 필터와 연동해 시각화.) (V1.35.1: 🔒 마스터 일정 저장/당기기 시 서버(GAS V1.21.0)가 원본 시트에서 기존 셀을 못 찾아 못 지운 경우 warning을 반환하도록 바뀐 것에 맞춰, 그 warning을 토스트로 노출하도록 수정. 이 클라이언트 변경은 GAS 쪽도 V1.21.0(원본 셀 매칭 시 줄바꿈/공백 정규화 + 실패 시 warning 반환)으로 함께 올려야 의미가 있음.) (V1.36.0: 🔀 밀어내기 후보 추천에서 🔒 자동연동(마스터) 일정도 조정 대상으로 포함 — V1.32.0에서 마스터 일정 자체 편집은 이미 가능해졌으나 이 기능만 여전히 "고정된 장애물"로 취급해 막고 있던 것을 수정. 대상 선택 드롭다운에서 마스터 일정 비활성화(disabled) 해제, 밀림 연쇄 계산(computeReflowCascade)에서 마스터 일정도 일반 일정과 동일한 근무일 규칙으로 새 위치를 재계산, 지그 충돌 시 순서 교체 대안(findReflowSwapAlternative)에서도 마스터 일정을 파트너 후보로 포함. 결과 화면에 🔒 표시로 마스터 일정임을 구분하고, 일괄 반영/되돌리기 시 마스터 항목은 saveSchedule이 아니라 updateMasterSchedule 경로로 원본 '시험계획표' 시트에 직접 반영(반영 후 셀 위치가 바뀔 수 있어 전체 재로딩으로 동기화). GAS 코드 변경 불필요(기존 updateMasterSchedule 액션 재사용).) (V1.37.0: ① 좌측 '보기' 메뉴 순서를 대시보드가 최상단에 오도록 변경. ② 다크모드 지원 — 헤더의 스위치로 라이트/다크 전환, 선택값은 localStorage에 저장되어 다음 접속 시에도 유지되며 대시보드 차트(Chart.js) 텍스트·그리드 색상도 함께 갱신. ③ 대시보드 상단 필터를 '월별 차트 기준 연도' 단일 선택에서 '년도'/'월' 2가지 선택으로 분리 — 두 필터 모두 KPI 카드와 모든 차트에 공통 반영(각각 '전체' 선택 가능). ④ 테이블뷰 스케줄 목록의 원형 아이콘 표시를 제목 맨 앞의 이모지·괄호·기호 등 특수문자를 건너뛰고 첫 번째 글자(문자/숫자)를 표시하도록 수정.) (V1.37.1: 다크모드에서 그룹/장비/검색 필터와 대시보드 년도·월 선택란의 글자가 안 보이던 문제 수정 — 해당 요소들이 쓰는 Tailwind '!bg-slate-50'/'!bg-white'(!important) 배경 유틸리티를 다크모드 전용 규칙으로 별도 재정의하고, 입력란 글자색·placeholder 색상도 강제 적용. 브라우저 기본 폼 컨트롤이 다크로 렌더링되도록 color-scheme:dark 힌트도 추가.) (V1.37.2: 타임라인뷰 다크모드에서 근태행(bg-emerald-50/50)·오늘 날짜 컬럼(bg-indigo-100/60) 음영이 연한 파스텔+투명도 조합 때문에 탁한 회색으로 보이던 문제 수정 — 채도가 살아있는 진한 톤으로 재정의.) (V1.38.0: 로그인/메인 화면 헤더의 🧪 이모지+인디고 박스 로고를 사용자가 제공한 'OMS' 브랜드 로고 이미지로 교체(이미지를 base64로 파일 내부에 내장해 외부 호스팅 없이 동작). 브라우저 탭 파비콘도 동일 로고의 원형 엠블럼 부분을 정사각형으로 잘라 함께 적용.) (V1.38.1: 다크모드에서 메모/회의록 카드(bg-amber-50)와 앰버·오렌지 계열 배지/테두리가 흙빛 갈색으로 탁하게 보이던 문제 수정 — 앰버·오렌지는 파란기가 거의 없는 색이라 반투명으로 어두운 남색 배경과 섞이면 갈색으로 탁해지는 것을 확인, 반투명 블렌딩 대신 미리 정한 짙은 앰버 톤(플랫 컬러)으로 대체.) (V1.38.2: 위와 같은 원인(연한 파스텔 색상에 opacity를 섞은 클래스)의 누락 사례 전수 점검 — 근태 등록 패널(bg-emerald-50/60), 근태 안내문구(text-emerald-700/70), 메모 이미지 첨부 영역의 hover/focus 앰버 강조(bg-amber-50/50, border-amber-300/400), 캘린더·타임라인의 공휴일 배지(bg-white/80)까지 다크모드 전용 색상으로 보정. 반대로 bg-indigo-600/emerald-600/rose-500 등 원색 그대로인 버튼·범례 색상은 다크모드에서도 잘 보여 그대로 유지.) (V1.39.0: 원본 '시험계획표'에 101~102행으로 추가된 '기타' 2건(장비번호 1/2호로 구분)을 앱에서도 별도 레인으로 관리하도록 장비 목록에 '기타 1호'(etc_1, 기존 'etc_1'을 개명)/'기타 2호'(etc_2, 신규) 등록. ⚠️ 이 항목이 실제로 뜨려면 GAS 쪽도 함께 수정해야 함 — ① '시험계획표' 파일의 집계 스크립트(copyAndPasteWithMergedCellsOptimized)가 100행까지만 읽던 것을 101~102행까지 읽도록 확장, ② 웹앱 백엔드(GAS)의 getMonthlyTabCache가 조회하는 B13:B100/C13:C100 범위를 B13:B105/C13:C105로 확장(당기기·마스터 일정 수정 등 원본 셀 되쓰기 기능용), ③ EQUIPMENT_NAME_PREFIX_MAP에 'etc_':'기타' 역매핑 추가(앱에서 등록한 기타 일정을 원본 시트에 반영하는 pushToAppInput용). 자세한 코드는 대화 참고 — 기존 '내충격' 항목은 그대로 '기타 1호'(etc_1) 레인을 함께 사용함(의도적으로 유지, 분리 원하면 추가 협의 필요).) (V1.39.1: 타임라인뷰에서 근태행의 좌측 고정 라벨("🗓️ 근태") 뒤로 스크롤되는 근태 막대(예: 연차 등)가 비쳐 보이며 마치 왼쪽 기준열을 뚫고 나오는 것처럼 보이던 문제 수정. 원인은 V1.37.2에서 근태행 배경(bg-emerald-50/50)을 고치면서 근태 라벨이 쓰는 bg-emerald-50도 함께 반투명(rgba)으로 바뀌어, 좌측 고정 라벨이 원래 해야 할 '뒤쪽 스크롤 내용 가리기' 역할을 못 하게 된 것 — 근태 라벨 전용 클래스를 추가해 다크모드에서 불투명한 배경을 갖도록 수정.) (V1.39.2: 헤더 로고 이미지가 좌우 중앙에 맞지 않고 왼쪽으로 쏠려 보이던 문제 수정 — 원본 로고의 반짝이 장식이 본체(날개+원형 엠블럼)에서 멀리 떨어진 오른쪽 끝에만 있어서, 이를 포함해 crop하다 보니 여백이 좌우 비대칭이 됐던 것. 반짝이를 제외하고 날개+엠블럼 마크 기준으로 좌우 대칭 크롭해 재적용.) (V1.40.0: 🔔 메모/회의록 리마인드 — 메모 저장 시 본문에서 날짜로 보이는 표현(예: 9/20, 9.20, 9-20, 9월20일, 연도 포함 날짜)을 자동으로 인식해 리마인드 후보로 제시하고, 저장 전 칩 형태로 확인/제거 가능(오탐 방지, 단독 날짜도 인식하므로 필요 없는 건 직접 제거). 해당 날짜가 되면(오늘 이하로 지나면) 앱 접속 시 상단 배너로 알림, 캘린더·타임라인 해당 날짜 칸에도 🔔(예정은 반투명) 표시 — 클릭 시 해당 메모로 바로 이동. '확인함' 버튼으로 리마인드를 완료 처리(메모 자체를 삭제하면 리마인드도 함께 삭제됨). 별도 시간 트리거 없이 앱 접속/탭 재포커스 시점에만 확인(GAS 쪽도 V1.26.0으로 함께 반영 필요 — memosSheet reminderDates/reminderDone 컬럼, getActiveReminders/markReminderDone 액션).) (V1.40.1: 메모/회의록 모달에서 표처럼 넓은 콘텐츠가 카드 바깥으로 삐져나오던 문제 수정 — 스크롤 영역 div가 flex 자식일 때 기본 min-width:auto 때문에 표의 실제 폭만큼 카드 자체가 넓어지던 것이 원인. 해당 div에 min-w-0 추가, memo-rich-content에 overflow-x:auto 추가해 넓은 표는 그 안에서만 가로 스크롤되도록 수정.) (V1.40.2: 타임라인 좌우 스크롤 시 버벅이며 점프하던 문제 수정 — 상단 보조 스크롤바/본문 스크롤 두 요소를 서로 동기화할 때 매 scroll 이벤트마다 즉시 scrollLeft를 써주던 것을, requestAnimationFrame으로 프레임당 1회만 반영하도록 배치 처리해 트랙패드 관성 스크롤 중 강제 레이아웃 반복을 없앰.) (V1.40.3: 타임라인뷰 계획 막대 드래그 이동/기간조정을 🔒 업무현황 자동연동(마스터) 일정에도 허용 — 기존에는 일반(앱 등록) 일정만 드래그 가능했고 마스터는 attachBarDragHandlers에서 명시적으로 제외되어 있었음. 드롭 시 확인 팝업(지그 충돌 검사 포함, 기존 로직 그대로)까지는 동일하게 거치되, 실제 저장은 마스터 일정 편집 모달(saveScheduleFromModal)과 동일하게 saveSchedule 대신 updateMasterSchedule 경로로 분기해 원본 '시험계획표'에 직접 반영하고 전체 재로딩. 캘린더뷰는 이번 범위에서 제외(추후 별도 진행).) (V1.40.4: 리마인드 표시 위치를 상단 배너에서 좌측 사이드패널 최상단(보기 메뉴 위)으로 이동 — 캘린더/타임라인 화면 자체를 가리지 않고, 뷰를 바꿔도 계속 보이도록 개선. 좁은 패널 폭에 맞게 카드 레이아웃도 세로형으로 조정.) (V1.40.5: 메모/회의록 리치텍스트 툴바에 글자 크기 선택(10~32px) 드롭다운 추가 — 원하는 영역을 드래그로 선택 후 크기를 고르면 적용. execCommand('fontSize')가 임의 px을 못 받는 한계를 우회하기 위해 임시 값(7)으로 적용한 뒤 생성된 font 태그를 실제 px의 span으로 치환하는 방식 사용. select는 버튼과 달리 native하게 열려야 해서 mousedown-preventDefault 트릭을 못 쓰는 대신, 선택 영역을 별도로 저장해뒀다가 크기 적용 직전 복원하는 방식으로 드롭다운 클릭 시 텍스트 선택이 풀리는 문제를 해결.) (V1.41.0: 메모/회의록 리치텍스트에 텍스트 정렬(왼쪽/가운데/오른쪽, justifyLeft/Center/Right) 버튼 추가 — 표 안 셀에서 쓰면 그 셀 기준으로 정렬됨. 표 셀 병합/분할 기능 추가: 표 안에서 여러 셀에 걸쳐 마우스로 드래그해 선택한 뒤 '병합' 버튼을 누르면 하나의 셀로 합쳐지고(브라우저가 드래그 시 셀 단위로 나눠주는 다중 Range 선택을 그대로 활용, Chrome/Edge 등에서 동작), 이미 병합된 셀에 커서를 두고 '분할' 버튼을 누르면 원래의 낱개 셀들로 되돌아감(내용은 원래 좌상단 셀에 유지). rowspan/colspan이 섞인 표도 올바르게 처리하도록 셀 좌표를 격자(grid)로 계산하는 로직을 함께 추가.) (V1.42.0: 메모/회의록 표 셀에 음영(배경색) 넣는 기능 추가 — 회색/노랑/초록/파랑/빨강 프리셋과 색상 직접 선택, '채우기없음'으로 지우기 지원. 마우스로 여러 셀을 드래그해 선택하면 그 셀 전부에, 아니면 커서가 있는 셀 하나에 적용됨(병합/분할과 셀 선택 로직 공유). 옅은 배경 위에서도 글자가 잘 보이도록 음영 적용 시 글자색을 짙은 톤으로 함께 고정.) (V1.44.0: ① 표 안 ↑/↓ 커서 이동 판정 로직 재작성 — 셀 테두리로부터의 거리로 첫/마지막 줄을 판정하던 방식이 <td> 기본 속성인 vertical-align:middle(내용이 짧으면 세로 가운데 정렬됨) 때문에 실제로는 판정이 거의 항상 실패했음. 셀 내용의 맨 처음/맨 끝 위치의 좌표와 현재 커서 좌표를 직접 비교하는 방식으로 바꿔 정확도 개선. ② 표에서 여러 셀을 드래그로 선택한 뒤 서식/음영을 적용하면 클릭(마지막 커서 위치)한 셀 하나에만 적용되던 문제 수정 — 원인은 두 가지: (a) 서식/표 버튼을 V1.43.0에서 드롭다운(요약/펼침) 그룹으로 묶으면서, 그 그룹을 여는 클릭 자체가 표에서 만들어둔 드래그 선택을 지워버리고 있었음(다른 버튼들처럼 summary에도 mousedown-preventDefault 추가로 해결). (b) 설사 선택이 유지되어도 execCommand를 여러 표 셀에 걸친 선택에 그대로 실행하면 브라우저가 셀 하나에만 적용하는 경우가 있어, 드래그로 선택된 셀 목록을 직접 얻어와 셀마다 그 내용 전체를 선택한 뒤 개별적으로 서식 명령을 실행하도록 변경(memoRte, 글자크기 select용 저장/복원 로직 모두 동일하게 수정). 셀 음영(memoSetCellShading)은 애초에 이 방식이었어서 (a)만 고치면 됨.) (V1.45.0: 관리자 전용 '🔍 마스터 정합성 검사' 기능 추가 — 기존 '🧹 마스터 반영 중복 정리'가 앱 내부(수동 등록분 vs 마스터로 읽어온 것) 중복만 잡는 것과 달리, 이건 🔒 자동연동 항목끼리 비교해서 완전히 같은 원본 셀 내용(rawContent)이 서로 다른 날짜·기간·장비 조합으로 동시에 존재하는 경우를 찾는다. '이동' 처리 중 기존 셀을 못 지운 채 새 위치에도 반영되는 유형의 버그가 남긴 흔적을 진단하기 위한 용도. 이미 로딩된 schedules 배열만으로 비교해 원본 시트에 추가 API 호출 없이 즉시 동작하며, 진단 전용이라 삭제 버튼 없이 목록만 보여줌(원본 시트는 직접 확인 후 정리 필요). GAS 변경 불필요.) (V1.46.0: 마스터 정합성 검사의 비교 범위를 '내용이 같으면 장비가 달라도 비교'에서 '같은 장비(eqId) 안에서만 비교'로 좁힘 — 실사용에서는 서로 다른 장비로 동일 목적의 시험(이 시험/저 시험)을 진행하는 경우가 흔해, 장비까지 걸쳐 비교하면 이런 정상 케이스가 대량으로 오탐 처리됐음. 이동 처리 중 기존 셀을 못 지우는 버그는 애초에 같은 장비 안에서만 발생하므로 진단 목적은 그대로 유지하면서 오탐만 제거됨. 결과 카드도 장비명을 그룹 상단에 한 번만 표시하도록 정리.) (V1.47.0: '🔍 마스터 정합성 검사' 기능 제거(V1.45.0~V1.46.0). 실제로는 원본 시트를 만드는 매크로(copyAndPasteWithMergedCellsOptimized)가 같은 장비·내용 키를 가진 레코드를 "가장 이른 시작일~가장 늦은 종료일"로 병합하는 구조라, 이 기능이 가정했던 "같은 내용의 마스터 일정이 서로 다른 날짜로 앱에 별개로 뜨는" 상황 자체가 거의 발생하지 않고, 대신 기간이 비정상적으로 길어지는 형태로 나타나 캘린더/타임라인에서 이미 시각적으로 눈에 띄기 때문에 별도 기능의 실효성이 낮다는 판단으로 제거. 버튼/모달/관련 함수(findMasterConsistencyIssues, openConsistencyCheckModal 등) 전부 삭제.) (V1.48.0: 메모/회의록에 엑셀·파워포인트 "표"를 붙여넣으면 항상 스냅샷 이미지로만 붙던 문제 수정 — 클립보드에 표 구조(HTML <table>)와 이미지가 함께 담겨오는데, 기존 붙여넣기 처리가 이미지 항목이 있으면 무조건 그걸로 처리하고 기본 붙여넣기를 막아버려서 표 HTML이 있어도 항상 이미지만 붙었음. 클립보드 HTML에 <table>이 있으면 기본 붙여넣기(표 그대로 삽입)에 맡기도록 수정하고, 붙여넣은 표에도 우리 표 편집 도구(행/열·병합/분할·음영·방향키 이동)가 동작하도록 memo-rte-table 클래스를 붙여줌. 파워포인트 "차트" 개체는 원래 표 데이터가 아니라 그림으로 복사되는 경우가 대부분이라 이 분기로 못 살리며 예전처럼 이미지로 붙음(정상 동작).) (V1.48.1: 버그수정 — V1.45.0에서 '마스터 정합성 검사' 모달을 추가하면서 바로 옆에 있던 '마스터 반영 중복 정리' 모달의 '닫기'/'선택 항목 삭제' 버튼을 실수로 함께 지워버려, 그 뒤(V1.46.0~V1.48.0) 계속 정리 실행 버튼이 안 보이던 문제 복구. 버튼을 호출하는 JS 함수(toggleAllDedupeItems/deleteSelectedDedupeItems)는 원래부터 그대로 남아 있었어서 버튼 마크업만 복원하면 되는 문제였음.) (V1.49.0: 🔒 자동연동 일정의 '지연' 표시 반영 — 원본 시트의 집계 로직(copyAndPasteWithMergedCellsOptimized)이 진행결과 '미입고'/'검증지연' 값도 이제 '시험계획누적'에 포함시키도록 바뀌었는데, 앱의 지연 배지(⚠️, 캘린더 칩 접두어·타임라인 배지·날짜별 목록)는 여전히 앱 등록 일정의 progressStatus==='지연'만 검사하고 있어 마스터 일정은 이 값들이 들어와도 지연 표시가 전혀 안 뜨던 문제 수정. 마스터/앱 등록 일정 모두를 아우르는 isScheduleDelayed() 헬퍼를 새로 추가(마스터는 status가 '미입고' 또는 '검증지연'인 경우, 앱 등록은 기존과 동일)하고, 기존 s.progressStatus==='지연' 체크를 전부 이걸로 교체. 타임라인 배지는 마스터의 경우 '⚠️ 지연' 대신 원본의 구체적 사유(⚠️ 미입고 / ⚠️ 검증지연)를 그대로 표시(getDelayBadgeText). 테이블뷰 상태 배지 색상표(statusColors)와 대시보드 색상표(DASH_STATUS_COLORS)에 '검증지연' 항목 추가, 대시보드 '변경건수' 판정(isChangedSchedule)에도 미입고/검증지연 포함. 마스터 일정의 진행상태 팝오버(완료/진행 버튼)는 기존과 동일하게 유지 — 이 두 값은 원본 시트에서만 설정 가능하며 앱에서 새로 쓰는 기능은 추가하지 않음. GAS 변경 불필요(읽기만 반영, 쓰기 검증은 기존 그대로).) (V1.50.0: 지연 배지(⚠️)가 다른 막대에 가려지는 문제 수정 — 캘린더뷰 연결막대는 z-index:2로 명시돼 있는데 배지는 z-index를 지정하지 않아(auto) CSS 스택 규칙상 양수 z-index를 가진 막대가 항상 위에 그려지고 있었음(실질적으로 늘 가려짐). 타임라인뷰는 막대 자체엔 z-index가 없지만, 배지도 z-index가 없어 DOM에 나중에 추가되는 다른(이후 날짜의) 막대가 같은 auto 레이어 순서상 위로 그려지며 가리는 경우가 있었음. 캘린더·타임라인 배지 모두에 z-index:20을 명시해 항상 막대보다 위에 그려지도록 수정. 추가로 타임라인 배지는 '⚠️ 미입고'/'⚠️ 검증지연'처럼 텍스트 길이가 들쭉날쭉해 기존 좌표 계산으로는 막대 오른쪽 끝을 넘어 다음 날짜 칸까지 삐져나가던 것을, translateX(-100%)로 배지의 오른쪽 끝이 막대 오른쪽 끝에 맞춰지도록 고쳐 텍스트 길이와 무관하게 항상 막대 안쪽에 붙게 함.) -->
+<!-- 시험 스케줄 관리 시스템 V1.29.0 (관리자 외 회원: 자동계획 수립/마스터 반영 중복 정리/메모 회의록/휴일 등록 메뉴 숨김) (V1.27.0: 좌측 패널 근태 등록 추가 — 뷰어 권한자도 본인 근태 편집 가능, 캘린더/타임라인 배광1호 위에 근태 표시) (V1.27.1: 달의 마지막 날/주의 마지막 칸에 시작하는 일정이 타임라인·캘린더에서 안 보이던 타임존 버그 수정) (V1.27.2: 모바일 공간 확보를 위해 타임라인뷰 상단 안내 문구 제거) (V1.28.0: 일정 상세 모달에 '결과 리뷰' 자유 텍스트 항목 추가) (V1.29.0: 수동 일정입력 시 환경UNIT 제외 장비의 주말/공휴일 포함 여부를 검증하여 경고 후 사용자가 저장여부 선택 가능하도록 개선) (V1.30.0: 관리자 전용 '🔀 밀어내기 후보 추천' 기능 추가 — ① 신규/지연 건이 자리가 없을 때 기존 일정을 순서대로 밀어내는 시뮬레이션과 변경 전/후 비교, ② 이미 계획된 일정 중 예정일이 너무 늦다는 요구로 당기거나(앞당기기) 기간을 단축해야 할 때도 같은 방식으로 뒤 일정을 밀어내는 시뮬레이션 지원(모드 전환). 지그 충돌 시 인접 일정과 순서를 바꿔보는 대안을 자동 탐색해 제안하며, 자동연동(마스터) 일정은 고정된 장애물로 처리해 밀 수 없음을 명확히 알림. 밀리거나 당겨지는 일정은 원래 차지하던 실제 시험일수(근무일)를 유지하도록 주말/공휴일을 감안해 새 위치의 달력기간을 재계산함(자동계획 수립과 동일 규칙: 환경UNIT 예외, 습기UNIT 전체구간 무휴일, 그 외 장비는 시험일수 기준 종료일 산정). 일괄 반영/되돌리기 이력 관리(기간 변경도 함께 원복)) (V1.31.0: 관리자 전용 — 캘린더뷰·타임라인뷰의 계획 막대에 마우스오버하면 '⏪ 당기기/단축' 단축 아이콘이 뜸. 클릭하면 오늘~현재 시작일 사이의 빈 자리(시험일수·지그 기준 검증됨)를 바로 골라 이동할 수 있고, 빈 자리가 없으면 자동으로 '🔀 밀어내기 후보 추천' 모달이 해당 일정이 선택된 상태로 열림) (V1.32.0: 🔒 업무현황 자동연동(마스터) 일정 양방향 동기화 — 편집 권한자는 마스터 일정도 편집 가능해지며, 저장 시 앱 자체 Schedules 시트가 아니라 원본 '시험계획표' 월별 탭 셀에 직접 반영됨(서버의 새 updateMasterSchedule 액션 필요, 별도 GAS 코드 참고). 내용만 수정한 경우 기존 셀의 음영은 유지, 날짜/기간/장비가 바뀌어 자리를 옮긴 경우에는 기존 셀을 비우고 새 위치에 앱 반영 표시용 고정 색상(인디고 계열, #c7d2fe)을 입힘) (V1.33.0: 🔒 마스터 일정에도 호버 단축 팝오버(진행상태 변경/당기기) 개방 — ① 진행상태는 '완료'/'진행' 두 가지만 지원(원본시트 파이프라인이 진행결과 칸에 '완료' 또는 공란만 인식하므로 '지연' 버튼은 마스터 항목에서 숨김, 서버의 새 updateMasterProgressStatus 액션이 월별 탭 진행결과 셀에 직접 반영), ② '당기기/단축'은 updateMasterSchedule 경로로 원본 셀에 반영(관리자 전용, 기존 권한 범위 동일). 추가로 타임라인뷰 막대 라벨을 마스터 일정에 한해 영문 추출 대신 제목(첫 줄) 전체로 표시.) (V1.34.0: 타임라인뷰 막대 라벨을 앱 등록 일정도 마스터와 동일하게 제목(첫 줄) 전체로 표시(영문 추출 방식 폐지). 앱에서 등록한 일정을 원본 '시험계획표' 월별 탭에 반영(pushToAppInput)할 때도 마스터 항목처럼 배경색을 입히되, 고정색이 아니라 항목마다 랜덤한(가독성 있는 밝기·채도 범위 내) 색상을 적용(서버 randomVisibleColor 참고).) (V1.35.0: ① 전체 일정/메모 모달의 세로 스크롤이 둥근 테두리를 뚫고 보이던 렌더링 버그 수정(헤더 고정 + 내부 스크롤 영역 분리). ② 메모/회의록 내용 입력을 리치텍스트로 전면 교체 — 굵게/밑줄/글자색/서식지우기, 표 삽입 및 행·열 추가삭제·표 전체삭제 지원. ③ 사이드 필터의 '장비'를 단일 선택에서 다중 선택 체크리스트로 전환. ④ '📊 대시보드' 뷰 신규 추가 — Chart.js 기반으로 연도별/월별 계획건수 추이, 시험기별·차종별·품목별(TOP10) 계획건수, 진행상태 분포(완료율·변경건수 포함 KPI 카드)를 좌측 필터와 연동해 시각화.) (V1.35.1: 🔒 마스터 일정 저장/당기기 시 서버(GAS V1.21.0)가 원본 시트에서 기존 셀을 못 찾아 못 지운 경우 warning을 반환하도록 바뀐 것에 맞춰, 그 warning을 토스트로 노출하도록 수정. 이 클라이언트 변경은 GAS 쪽도 V1.21.0(원본 셀 매칭 시 줄바꿈/공백 정규화 + 실패 시 warning 반환)으로 함께 올려야 의미가 있음.) (V1.36.0: 🔀 밀어내기 후보 추천에서 🔒 자동연동(마스터) 일정도 조정 대상으로 포함 — V1.32.0에서 마스터 일정 자체 편집은 이미 가능해졌으나 이 기능만 여전히 "고정된 장애물"로 취급해 막고 있던 것을 수정. 대상 선택 드롭다운에서 마스터 일정 비활성화(disabled) 해제, 밀림 연쇄 계산(computeReflowCascade)에서 마스터 일정도 일반 일정과 동일한 근무일 규칙으로 새 위치를 재계산, 지그 충돌 시 순서 교체 대안(findReflowSwapAlternative)에서도 마스터 일정을 파트너 후보로 포함. 결과 화면에 🔒 표시로 마스터 일정임을 구분하고, 일괄 반영/되돌리기 시 마스터 항목은 saveSchedule이 아니라 updateMasterSchedule 경로로 원본 '시험계획표' 시트에 직접 반영(반영 후 셀 위치가 바뀔 수 있어 전체 재로딩으로 동기화). GAS 코드 변경 불필요(기존 updateMasterSchedule 액션 재사용).) (V1.37.0: ① 좌측 '보기' 메뉴 순서를 대시보드가 최상단에 오도록 변경. ② 다크모드 지원 — 헤더의 스위치로 라이트/다크 전환, 선택값은 localStorage에 저장되어 다음 접속 시에도 유지되며 대시보드 차트(Chart.js) 텍스트·그리드 색상도 함께 갱신. ③ 대시보드 상단 필터를 '월별 차트 기준 연도' 단일 선택에서 '년도'/'월' 2가지 선택으로 분리 — 두 필터 모두 KPI 카드와 모든 차트에 공통 반영(각각 '전체' 선택 가능). ④ 테이블뷰 스케줄 목록의 원형 아이콘 표시를 제목 맨 앞의 이모지·괄호·기호 등 특수문자를 건너뛰고 첫 번째 글자(문자/숫자)를 표시하도록 수정.) (V1.37.1: 다크모드에서 그룹/장비/검색 필터와 대시보드 년도·월 선택란의 글자가 안 보이던 문제 수정 — 해당 요소들이 쓰는 Tailwind '!bg-slate-50'/'!bg-white'(!important) 배경 유틸리티를 다크모드 전용 규칙으로 별도 재정의하고, 입력란 글자색·placeholder 색상도 강제 적용. 브라우저 기본 폼 컨트롤이 다크로 렌더링되도록 color-scheme:dark 힌트도 추가.) (V1.37.2: 타임라인뷰 다크모드에서 근태행(bg-emerald-50/50)·오늘 날짜 컬럼(bg-indigo-100/60) 음영이 연한 파스텔+투명도 조합 때문에 탁한 회색으로 보이던 문제 수정 — 채도가 살아있는 진한 톤으로 재정의.) (V1.38.0: 로그인/메인 화면 헤더의 🧪 이모지+인디고 박스 로고를 사용자가 제공한 'OMS' 브랜드 로고 이미지로 교체(이미지를 base64로 파일 내부에 내장해 외부 호스팅 없이 동작). 브라우저 탭 파비콘도 동일 로고의 원형 엠블럼 부분을 정사각형으로 잘라 함께 적용.) (V1.38.1: 다크모드에서 메모/회의록 카드(bg-amber-50)와 앰버·오렌지 계열 배지/테두리가 흙빛 갈색으로 탁하게 보이던 문제 수정 — 앰버·오렌지는 파란기가 거의 없는 색이라 반투명으로 어두운 남색 배경과 섞이면 갈색으로 탁해지는 것을 확인, 반투명 블렌딩 대신 미리 정한 짙은 앰버 톤(플랫 컬러)으로 대체.) (V1.38.2: 위와 같은 원인(연한 파스텔 색상에 opacity를 섞은 클래스)의 누락 사례 전수 점검 — 근태 등록 패널(bg-emerald-50/60), 근태 안내문구(text-emerald-700/70), 메모 이미지 첨부 영역의 hover/focus 앰버 강조(bg-amber-50/50, border-amber-300/400), 캘린더·타임라인의 공휴일 배지(bg-white/80)까지 다크모드 전용 색상으로 보정. 반대로 bg-indigo-600/emerald-600/rose-500 등 원색 그대로인 버튼·범례 색상은 다크모드에서도 잘 보여 그대로 유지.) (V1.39.0: 원본 '시험계획표'에 101~102행으로 추가된 '기타' 2건(장비번호 1/2호로 구분)을 앱에서도 별도 레인으로 관리하도록 장비 목록에 '기타 1호'(etc_1, 기존 'etc_1'을 개명)/'기타 2호'(etc_2, 신규) 등록. ⚠️ 이 항목이 실제로 뜨려면 GAS 쪽도 함께 수정해야 함 — ① '시험계획표' 파일의 집계 스크립트(copyAndPasteWithMergedCellsOptimized)가 100행까지만 읽던 것을 101~102행까지 읽도록 확장, ② 웹앱 백엔드(GAS)의 getMonthlyTabCache가 조회하는 B13:B100/C13:C100 범위를 B13:B105/C13:C105로 확장(당기기·마스터 일정 수정 등 원본 셀 되쓰기 기능용), ③ EQUIPMENT_NAME_PREFIX_MAP에 'etc_':'기타' 역매핑 추가(앱에서 등록한 기타 일정을 원본 시트에 반영하는 pushToAppInput용). 자세한 코드는 대화 참고 — 기존 '내충격' 항목은 그대로 '기타 1호'(etc_1) 레인을 함께 사용함(의도적으로 유지, 분리 원하면 추가 협의 필요).) (V1.39.1: 타임라인뷰에서 근태행의 좌측 고정 라벨("🗓️ 근태") 뒤로 스크롤되는 근태 막대(예: 연차 등)가 비쳐 보이며 마치 왼쪽 기준열을 뚫고 나오는 것처럼 보이던 문제 수정. 원인은 V1.37.2에서 근태행 배경(bg-emerald-50/50)을 고치면서 근태 라벨이 쓰는 bg-emerald-50도 함께 반투명(rgba)으로 바뀌어, 좌측 고정 라벨이 원래 해야 할 '뒤쪽 스크롤 내용 가리기' 역할을 못 하게 된 것 — 근태 라벨 전용 클래스를 추가해 다크모드에서 불투명한 배경을 갖도록 수정.) (V1.39.2: 헤더 로고 이미지가 좌우 중앙에 맞지 않고 왼쪽으로 쏠려 보이던 문제 수정 — 원본 로고의 반짝이 장식이 본체(날개+원형 엠블럼)에서 멀리 떨어진 오른쪽 끝에만 있어서, 이를 포함해 crop하다 보니 여백이 좌우 비대칭이 됐던 것. 반짝이를 제외하고 날개+엠블럼 마크 기준으로 좌우 대칭 크롭해 재적용.) (V1.40.0: 🔔 메모/회의록 리마인드 — 메모 저장 시 본문에서 날짜로 보이는 표현(예: 9/20, 9.20, 9-20, 9월20일, 연도 포함 날짜)을 자동으로 인식해 리마인드 후보로 제시하고, 저장 전 칩 형태로 확인/제거 가능(오탐 방지, 단독 날짜도 인식하므로 필요 없는 건 직접 제거). 해당 날짜가 되면(오늘 이하로 지나면) 앱 접속 시 상단 배너로 알림, 캘린더·타임라인 해당 날짜 칸에도 🔔(예정은 반투명) 표시 — 클릭 시 해당 메모로 바로 이동. '확인함' 버튼으로 리마인드를 완료 처리(메모 자체를 삭제하면 리마인드도 함께 삭제됨). 별도 시간 트리거 없이 앱 접속/탭 재포커스 시점에만 확인(GAS 쪽도 V1.26.0으로 함께 반영 필요 — memosSheet reminderDates/reminderDone 컬럼, getActiveReminders/markReminderDone 액션).) (V1.40.1: 메모/회의록 모달에서 표처럼 넓은 콘텐츠가 카드 바깥으로 삐져나오던 문제 수정 — 스크롤 영역 div가 flex 자식일 때 기본 min-width:auto 때문에 표의 실제 폭만큼 카드 자체가 넓어지던 것이 원인. 해당 div에 min-w-0 추가, memo-rich-content에 overflow-x:auto 추가해 넓은 표는 그 안에서만 가로 스크롤되도록 수정.) (V1.40.2: 타임라인 좌우 스크롤 시 버벅이며 점프하던 문제 수정 — 상단 보조 스크롤바/본문 스크롤 두 요소를 서로 동기화할 때 매 scroll 이벤트마다 즉시 scrollLeft를 써주던 것을, requestAnimationFrame으로 프레임당 1회만 반영하도록 배치 처리해 트랙패드 관성 스크롤 중 강제 레이아웃 반복을 없앰.) (V1.40.3: 타임라인뷰 계획 막대 드래그 이동/기간조정을 🔒 업무현황 자동연동(마스터) 일정에도 허용 — 기존에는 일반(앱 등록) 일정만 드래그 가능했고 마스터는 attachBarDragHandlers에서 명시적으로 제외되어 있었음. 드롭 시 확인 팝업(지그 충돌 검사 포함, 기존 로직 그대로)까지는 동일하게 거치되, 실제 저장은 마스터 일정 편집 모달(saveScheduleFromModal)과 동일하게 saveSchedule 대신 updateMasterSchedule 경로로 분기해 원본 '시험계획표'에 직접 반영하고 전체 재로딩. 캘린더뷰는 이번 범위에서 제외(추후 별도 진행).) (V1.40.4: 리마인드 표시 위치를 상단 배너에서 좌측 사이드패널 최상단(보기 메뉴 위)으로 이동 — 캘린더/타임라인 화면 자체를 가리지 않고, 뷰를 바꿔도 계속 보이도록 개선. 좁은 패널 폭에 맞게 카드 레이아웃도 세로형으로 조정.) (V1.40.5: 메모/회의록 리치텍스트 툴바에 글자 크기 선택(10~32px) 드롭다운 추가 — 원하는 영역을 드래그로 선택 후 크기를 고르면 적용. execCommand('fontSize')가 임의 px을 못 받는 한계를 우회하기 위해 임시 값(7)으로 적용한 뒤 생성된 font 태그를 실제 px의 span으로 치환하는 방식 사용. select는 버튼과 달리 native하게 열려야 해서 mousedown-preventDefault 트릭을 못 쓰는 대신, 선택 영역을 별도로 저장해뒀다가 크기 적용 직전 복원하는 방식으로 드롭다운 클릭 시 텍스트 선택이 풀리는 문제를 해결.) (V1.41.0: 메모/회의록 리치텍스트에 텍스트 정렬(왼쪽/가운데/오른쪽, justifyLeft/Center/Right) 버튼 추가 — 표 안 셀에서 쓰면 그 셀 기준으로 정렬됨. 표 셀 병합/분할 기능 추가: 표 안에서 여러 셀에 걸쳐 마우스로 드래그해 선택한 뒤 '병합' 버튼을 누르면 하나의 셀로 합쳐지고(브라우저가 드래그 시 셀 단위로 나눠주는 다중 Range 선택을 그대로 활용, Chrome/Edge 등에서 동작), 이미 병합된 셀에 커서를 두고 '분할' 버튼을 누르면 원래의 낱개 셀들로 되돌아감(내용은 원래 좌상단 셀에 유지). rowspan/colspan이 섞인 표도 올바르게 처리하도록 셀 좌표를 격자(grid)로 계산하는 로직을 함께 추가.) (V1.42.0: 메모/회의록 표 셀에 음영(배경색) 넣는 기능 추가 — 회색/노랑/초록/파랑/빨강 프리셋과 색상 직접 선택, '채우기없음'으로 지우기 지원. 마우스로 여러 셀을 드래그해 선택하면 그 셀 전부에, 아니면 커서가 있는 셀 하나에 적용됨(병합/분할과 셀 선택 로직 공유). 옅은 배경 위에서도 글자가 잘 보이도록 음영 적용 시 글자색을 짙은 톤으로 함께 고정.) (V1.44.0: ① 표 안 ↑/↓ 커서 이동 판정 로직 재작성 — 셀 테두리로부터의 거리로 첫/마지막 줄을 판정하던 방식이 <td> 기본 속성인 vertical-align:middle(내용이 짧으면 세로 가운데 정렬됨) 때문에 실제로는 판정이 거의 항상 실패했음. 셀 내용의 맨 처음/맨 끝 위치의 좌표와 현재 커서 좌표를 직접 비교하는 방식으로 바꿔 정확도 개선. ② 표에서 여러 셀을 드래그로 선택한 뒤 서식/음영을 적용하면 클릭(마지막 커서 위치)한 셀 하나에만 적용되던 문제 수정 — 원인은 두 가지: (a) 서식/표 버튼을 V1.43.0에서 드롭다운(요약/펼침) 그룹으로 묶으면서, 그 그룹을 여는 클릭 자체가 표에서 만들어둔 드래그 선택을 지워버리고 있었음(다른 버튼들처럼 summary에도 mousedown-preventDefault 추가로 해결). (b) 설사 선택이 유지되어도 execCommand를 여러 표 셀에 걸친 선택에 그대로 실행하면 브라우저가 셀 하나에만 적용하는 경우가 있어, 드래그로 선택된 셀 목록을 직접 얻어와 셀마다 그 내용 전체를 선택한 뒤 개별적으로 서식 명령을 실행하도록 변경(memoRte, 글자크기 select용 저장/복원 로직 모두 동일하게 수정). 셀 음영(memoSetCellShading)은 애초에 이 방식이었어서 (a)만 고치면 됨.) (V1.45.0: 관리자 전용 '🔍 마스터 정합성 검사' 기능 추가 — 기존 '🧹 마스터 반영 중복 정리'가 앱 내부(수동 등록분 vs 마스터로 읽어온 것) 중복만 잡는 것과 달리, 이건 🔒 자동연동 항목끼리 비교해서 완전히 같은 원본 셀 내용(rawContent)이 서로 다른 날짜·기간·장비 조합으로 동시에 존재하는 경우를 찾는다. '이동' 처리 중 기존 셀을 못 지운 채 새 위치에도 반영되는 유형의 버그가 남긴 흔적을 진단하기 위한 용도. 이미 로딩된 schedules 배열만으로 비교해 원본 시트에 추가 API 호출 없이 즉시 동작하며, 진단 전용이라 삭제 버튼 없이 목록만 보여줌(원본 시트는 직접 확인 후 정리 필요). GAS 변경 불필요.) (V1.46.0: 마스터 정합성 검사의 비교 범위를 '내용이 같으면 장비가 달라도 비교'에서 '같은 장비(eqId) 안에서만 비교'로 좁힘 — 실사용에서는 서로 다른 장비로 동일 목적의 시험(이 시험/저 시험)을 진행하는 경우가 흔해, 장비까지 걸쳐 비교하면 이런 정상 케이스가 대량으로 오탐 처리됐음. 이동 처리 중 기존 셀을 못 지우는 버그는 애초에 같은 장비 안에서만 발생하므로 진단 목적은 그대로 유지하면서 오탐만 제거됨. 결과 카드도 장비명을 그룹 상단에 한 번만 표시하도록 정리.) (V1.47.0: '🔍 마스터 정합성 검사' 기능 제거(V1.45.0~V1.46.0). 실제로는 원본 시트를 만드는 매크로(copyAndPasteWithMergedCellsOptimized)가 같은 장비·내용 키를 가진 레코드를 "가장 이른 시작일~가장 늦은 종료일"로 병합하는 구조라, 이 기능이 가정했던 "같은 내용의 마스터 일정이 서로 다른 날짜로 앱에 별개로 뜨는" 상황 자체가 거의 발생하지 않고, 대신 기간이 비정상적으로 길어지는 형태로 나타나 캘린더/타임라인에서 이미 시각적으로 눈에 띄기 때문에 별도 기능의 실효성이 낮다는 판단으로 제거. 버튼/모달/관련 함수(findMasterConsistencyIssues, openConsistencyCheckModal 등) 전부 삭제.) (V1.48.0: 메모/회의록에 엑셀·파워포인트 "표"를 붙여넣으면 항상 스냅샷 이미지로만 붙던 문제 수정 — 클립보드에 표 구조(HTML <table>)와 이미지가 함께 담겨오는데, 기존 붙여넣기 처리가 이미지 항목이 있으면 무조건 그걸로 처리하고 기본 붙여넣기를 막아버려서 표 HTML이 있어도 항상 이미지만 붙었음. 클립보드 HTML에 <table>이 있으면 기본 붙여넣기(표 그대로 삽입)에 맡기도록 수정하고, 붙여넣은 표에도 우리 표 편집 도구(행/열·병합/분할·음영·방향키 이동)가 동작하도록 memo-rte-table 클래스를 붙여줌. 파워포인트 "차트" 개체는 원래 표 데이터가 아니라 그림으로 복사되는 경우가 대부분이라 이 분기로 못 살리며 예전처럼 이미지로 붙음(정상 동작).) (V1.48.1: 버그수정 — V1.45.0에서 '마스터 정합성 검사' 모달을 추가하면서 바로 옆에 있던 '마스터 반영 중복 정리' 모달의 '닫기'/'선택 항목 삭제' 버튼을 실수로 함께 지워버려, 그 뒤(V1.46.0~V1.48.0) 계속 정리 실행 버튼이 안 보이던 문제 복구. 버튼을 호출하는 JS 함수(toggleAllDedupeItems/deleteSelectedDedupeItems)는 원래부터 그대로 남아 있었어서 버튼 마크업만 복원하면 되는 문제였음.) (V1.49.0: 🔒 자동연동 일정의 '지연' 표시 반영 — 원본 시트의 집계 로직(copyAndPasteWithMergedCellsOptimized)이 진행결과 '미입고'/'검증지연' 값도 이제 '시험계획누적'에 포함시키도록 바뀌었는데, 앱의 지연 배지(⚠️, 캘린더 칩 접두어·타임라인 배지·날짜별 목록)는 여전히 앱 등록 일정의 progressStatus==='지연'만 검사하고 있어 마스터 일정은 이 값들이 들어와도 지연 표시가 전혀 안 뜨던 문제 수정. 마스터/앱 등록 일정 모두를 아우르는 isScheduleDelayed() 헬퍼를 새로 추가(마스터는 status가 '미입고' 또는 '검증지연'인 경우, 앱 등록은 기존과 동일)하고, 기존 s.progressStatus==='지연' 체크를 전부 이걸로 교체. 타임라인 배지는 마스터의 경우 '⚠️ 지연' 대신 원본의 구체적 사유(⚠️ 미입고 / ⚠️ 검증지연)를 그대로 표시(getDelayBadgeText). 테이블뷰 상태 배지 색상표(statusColors)와 대시보드 색상표(DASH_STATUS_COLORS)에 '검증지연' 항목 추가, 대시보드 '변경건수' 판정(isChangedSchedule)에도 미입고/검증지연 포함. 마스터 일정의 진행상태 팝오버(완료/진행 버튼)는 기존과 동일하게 유지 — 이 두 값은 원본 시트에서만 설정 가능하며 앱에서 새로 쓰는 기능은 추가하지 않음. GAS 변경 불필요(읽기만 반영, 쓰기 검증은 기존 그대로).) (V1.50.0: 지연 배지(⚠️)가 다른 막대에 가려지는 문제 수정 — 캘린더뷰 연결막대는 z-index:2로 명시돼 있는데 배지는 z-index를 지정하지 않아(auto) CSS 스택 규칙상 양수 z-index를 가진 막대가 항상 위에 그려지고 있었음(실질적으로 늘 가려짐). 타임라인뷰는 막대 자체엔 z-index가 없지만, 배지도 z-index가 없어 DOM에 나중에 추가되는 다른(이후 날짜의) 막대가 같은 auto 레이어 순서상 위로 그려지며 가리는 경우가 있었음. 캘린더·타임라인 배지 모두에 z-index:20을 명시해 항상 막대보다 위에 그려지도록 수정. 추가로 타임라인 배지는 '⚠️ 미입고'/'⚠️ 검증지연'처럼 텍스트 길이가 들쭉날쭉해 기존 좌표 계산으로는 막대 오른쪽 끝을 넘어 다음 날짜 칸까지 삐져나가던 것을, translateX(-100%)로 배지의 오른쪽 끝이 막대 오른쪽 끝에 맞춰지도록 고쳐 텍스트 길이와 무관하게 항상 막대 안쪽에 붙게 함.) (V1.50.1: 버그수정 — 타임라인뷰 계획막대 복사→붙여넣기(pasteScheduleAt)가 앱 자체 Schedules 시트에만 저장되고 원본 '시험계획표' 월별 탭에는 전혀 반영되지 않던 문제 수정. 수동 신규 등록(saveScheduleFromModal)에는 '원본 반영' 체크박스가 있어 체크 시 pushScheduleToAppInput을 호출하는데, 붙여넣기 경로에는 이 호출 자체가 누락돼 있었음. 클립보드 배너에 '원본 반영' 체크박스(기본 체크됨)를 추가하고, 붙여넣기 성공 시 체크돼 있으면 pushScheduleToAppInput을 호출해 여러 칸에 이어 붙여넣을 때마다 각각 원본 시트에도 함께 반영되도록 함.) (V1.51.0: ① 버그수정 — 타임라인뷰 지연 배지(⚠️ 미입고/검증지연)가 막대가 타임라인
+첫 날짜 칸에서 짧게 시작할 때 오른쪽-정렬(translateX(-100%)) 때문에 좌측 sticky 장비명 칼럼 위로
+삐져나와 겹쳐 보이던 문제 수정 — 배지를 그린 뒤 실제 폭을 측정해 왼쪽 끝이 0보다 작아지면 오른쪽-정렬을
+포기하고 막대 왼쪽 끝에 붙도록 전환. ② 🔒 자동연동 '미입고' 일정 전용 '🔁 재일정' 단축 버튼 추가(호버
+팝오버, 관리자·편집자 전용) — 새로 자동계획 수립 흐름을 만드는 대신 이미 검증된 '마스터 일정 수정'
+경로(updateMasterSchedule의 '이동' 처리, V1.22.0에서 자리 확인 후 이동하도록 이미 안전하게 구현됨)를
+그대로 재사용. 클릭 시 편집 모달을 열고 시작일 기본값만 다음 근무일로 제안, 저장하면 새 위치에 반영되고
+기존 미입고 셀은 내용이 비워져 별도 삭제 로직 없이 다음 '시험계획누적' 집계 때 자연히 정리됨(단, 그
+정리 시점은 원본 시트의 집계 매크로가 다음에 실행될 때이며 즉시는 아님). ③ 대시보드 성능 개선 —
+검색어 입력마다(디바운스 없이) 대시보드 차트 6개를 매번 destroy 후 재생성하던 것이 버벅임의 주 원인이라
+판단, (a) 검색창 입력에 200ms 디바운스 적용, (b) renderDashChart가 차트 종류가 그대로면 destroy 없이
+data/options만 갱신 후 update('none')으로 무애니메이션 즉시 반영, (c) 연도·월·장비·상태·차종·품목별
+집계와 이번달/변경건수/완료건수 계산을 위해 목록을 9번 순회하던 것을 한 번의 순회로 통합(차종·품목
+파싱도 항목당 1회로 축소), (d) 연도 필터 select는 실제 연도 구성이 바뀔 때만 다시 그리도록 변경. ④
+대시보드에 '⚠️ 미입고 건수' KPI 카드와 '⚠️ 미입고 현황(장비별)' 막대 차트 추가.) -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -243,12 +257,18 @@
     <span class="w-px bg-slate-200 my-0.5"></span>
   </span>
   <button onclick="copyHoveredSchedule()" class="text-[10px] font-bold px-2 py-1 rounded hover:bg-indigo-50 text-indigo-600 whitespace-nowrap">📋 복사</button>
+  <span id="status-popover-reschedule-divider" class="hidden w-px bg-slate-200 my-0.5"></span>
+  <button id="status-popover-reschedule-btn" onclick="rescheduleHoveredSchedule()" class="hidden text-[10px] font-bold px-2 py-1 rounded hover:bg-rose-50 text-rose-600 whitespace-nowrap">🔁 재일정</button>
   <span id="status-popover-pull-divider" class="w-px bg-slate-200 my-0.5"></span>
   <button id="status-popover-pull-btn" onclick="pullHoveredSchedule()" class="text-[10px] font-bold px-2 py-1 rounded hover:bg-sky-50 text-sky-600 whitespace-nowrap">⏪ 당기기</button>
 </div>
 <!-- 계획막대 복사 후 붙여넣기 대기 상태를 알려주는 배너 -->
 <div id="clipboard-banner" class="hidden fixed left-1/2 -translate-x-1/2 top-3 z-[600] bg-indigo-600 text-white text-xs font-bold pl-4 pr-2 py-2 rounded-full shadow-lg items-center gap-2 max-w-[92vw]" style="display:none;">
   <span class="truncate">📋 <span id="clipboard-banner-text"></span> 복사됨 — 원하는 칸을 클릭해 붙여넣으세요</span>
+  <label class="shrink-0 flex items-center gap-1 bg-white/10 rounded-full px-2 py-1 cursor-pointer select-none" title="체크 시 붙여넣을 때마다 원본 '시험계획표' 시트에도 함께 반영됩니다">
+    <input type="checkbox" id="clipboard-push-appinput" class="w-3 h-3 accent-white" checked>
+    <span>원본 반영</span>
+  </label>
   <button onclick="clearClipboardSchedule()" class="shrink-0 bg-white/20 hover:bg-white/30 rounded-full px-2.5 py-1">종료</button>
 </div>
 
@@ -384,7 +404,7 @@
       </div>
       <div>
         <label class="field-label">검색</label>
-        <input id="filter-search" oninput="onFilterChange()" placeholder="🔍 제목/담당자" class="field-input !bg-slate-50 w-full">
+        <input id="filter-search" oninput="onFilterSearchInput()" placeholder="🔍 제목/담당자" class="field-input !bg-slate-50 w-full">
       </div>
       <div class="border-t border-slate-100 pt-4 space-y-2">
         <button id="btn-auto-schedule" onclick="openAutoScheduleModal1()" class="hidden w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs py-2.5 rounded-xl transition-all">🤖 자동계획 수립</button>
@@ -503,7 +523,7 @@
     </div>
     <p class="text-[11px] text-slate-400 font-semibold mb-4">좌측 필터(그룹/장비/검색)와 위의 년도·월 필터가 아래 통계 전체(KPI·모든 차트)에 함께 반영됩니다. 차종·품목은 항목명의 대괄호 표기(예: [NQ5 PE] STD)를 기준으로 자동 분류됩니다.</p>
 
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
       <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
         <p class="text-[10px] font-black text-indigo-400 uppercase mb-1">전체 계획건수</p>
         <p id="kpi-total" class="text-2xl font-black text-indigo-700">0</p>
@@ -519,6 +539,10 @@
       <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-4">
         <p class="text-[10px] font-black text-emerald-400 uppercase mb-1">완료율</p>
         <p id="kpi-done-rate" class="text-2xl font-black text-emerald-700">0%</p>
+      </div>
+      <div class="bg-slate-100 border border-slate-200 rounded-2xl p-4">
+        <p class="text-[10px] font-black text-slate-400 uppercase mb-1">⚠️ 미입고 건수</p>
+        <p id="kpi-nonarrival" class="text-2xl font-black text-slate-600">0</p>
       </div>
     </div>
 
@@ -546,6 +570,13 @@
       <div class="bg-white border border-slate-100 rounded-2xl p-4">
         <p class="text-xs font-bold text-slate-600 mb-2">📦 품목별 계획건수 (TOP 10)</p>
         <div class="relative" style="height:240px;"><canvas id="chart-item"></canvas></div>
+      </div>
+      <div class="bg-white border border-slate-100 rounded-2xl p-4">
+        <p class="text-xs font-bold text-slate-600 mb-2">⚠️ 미입고 현황 (장비별)</p>
+        <div class="relative" style="height:240px;">
+          <canvas id="chart-nonarrival"></canvas>
+          <p id="chart-nonarrival-empty" class="hidden absolute inset-0 flex items-center justify-center text-xs text-slate-400 font-semibold">현재 미입고 항목이 없습니다.</p>
+        </div>
       </div>
     </div>
   </div>
@@ -2894,6 +2925,12 @@ function isPullEligible(s){
     && s.eqId!==ATTENDANCE_EQID && s.eqId!==ATTENDANCE_CONFIG_EQID && s.eqId!==RESULT_REVIEW_EQID;
 }
 function isHolidayOrEventType(s){ return s && (s.eqId==='holiday' || s.eqId==='event'); }
+// '재일정' 단축 버튼을 쓸 수 있는 대상인지 — 🔒 자동연동 일정 중 원본 진행결과가 '미입고'(샘플 미입고 등으로
+// 시험 자체가 진행되지 못한 건)인 경우만 대상으로 함. '검증지연'은 시험은 진행됐고 결과 확인만 늦어지는
+// 경우라 재일정(새 시험 자리 잡기) 대상이 아니라고 판단해 제외.
+function isRescheduleEligible(s){
+  return isMasterSchedule(s) && s.status === '미입고' && canEdit();
+}
 function isHolidayType(s){ return s && s.eqId==='holiday'; } // 이 타입만 세로열 전체에 빨간 음영 적용
 // 특정 날짜가 '휴일' 타입에 걸리는지 빠르게 조회하기 위한 날짜 집합 생성
 function buildHolidayDateSet(scheduleList){
@@ -2946,11 +2983,14 @@ function showStatusPopover(el, scheduleId){
   if (!s) return;
   const showProgress = canSetProgressStatus(s);
   const showPull = isPullEligible(s);
-  if (!showProgress && !showPull) return;
+  const showReschedule = isRescheduleEligible(s);
+  if (!showProgress && !showPull && !showReschedule) return;
   hoveredScheduleId = scheduleId;
   cancelHideStatusPopover();
   document.getElementById('status-popover-progress-group').classList.toggle('hidden', !showProgress);
   document.getElementById('status-popover-delay-btn').classList.toggle('hidden', isMasterSchedule(s));
+  document.getElementById('status-popover-reschedule-btn').classList.toggle('hidden', !showReschedule);
+  document.getElementById('status-popover-reschedule-divider').classList.toggle('hidden', !showReschedule);
   document.getElementById('status-popover-pull-btn').classList.toggle('hidden', !showPull);
   document.getElementById('status-popover-pull-divider').classList.toggle('hidden', !showPull);
   const pop = document.getElementById('status-popover');
@@ -2976,6 +3016,30 @@ function pullHoveredSchedule(){
   document.getElementById('status-popover').classList.add('hidden');
   hoveredScheduleId = null;
   openPullShortcut(id);
+}
+
+// V1.51.0: 🔒 자동연동(마스터) '미입고' 일정의 재일정 수립 단축 버튼.
+// 완전히 새로운 등록 흐름을 만드는 대신, 이미 있는 '마스터 일정 수정' 경로(openScheduleModal 'edit' →
+// 저장 시 updateMasterSchedule 호출)를 그대로 재사용한다. 이 경로는 날짜/장비를 바꿔 저장하면
+// "새 위치에 자리가 있는지 먼저 확인 → 있으면 새 위치에 쓰고 기존 셀은 비움" 순서로 동작하므로
+// (V1.22.0에서 데이터 유실 방지를 위해 이미 이렇게 고쳐져 있음), 재일정 수립이 성공하면 기존 '미입고'
+// 표시는 별도 삭제 로직 없이 자동으로 정리된다(내용이 비워지면 다음 '시험계획누적' 집계 때 그 행 자체가
+// 걸러짐). 자동계획 수립(1/2 모달)은 여러 장비·차종 조합의 빈 자리를 한꺼번에 찾는 용도라 이 목적에는
+// 과함 — 이미 제목/담당자/상세내용이 정해진 항목 하나를 새 날짜로 옮기는 것뿐이므로 기존 수정 모달이 더
+// 안전하고(자리 검증·실패 시 원복 로직이 이미 검증되어 있음) 간단하다.
+function rescheduleHoveredSchedule(){
+  if (!hoveredScheduleId) return;
+  const s = schedules.find(x=>sameId(x.id, hoveredScheduleId));
+  document.getElementById('status-popover').classList.add('hidden');
+  hoveredScheduleId = null;
+  if (!s) return;
+  openScheduleModal('edit', s);
+  // 원래 날짜(미입고로 남은 날짜) 그대로 두면 저장 시 "내용만 수정"으로 처리돼 재일정 효과가 없으므로,
+  // 다음 근무일로 기본값을 옮겨 사용자가 실제 새 날짜를 고르도록 유도.
+  const suggested = fmtISO(nextWeekdayNonHoliday(new Date()));
+  document.getElementById('sch-start').value = suggested;
+  document.getElementById('sch-start').focus();
+  showToast('🔁 새로 시험할 날짜를 선택하고 저장하면, 이 미입고 건은 자동으로 정리됩니다.');
 }
 
 async function setBarProgressStatus(newStatus){
@@ -3087,9 +3151,16 @@ async function pasteScheduleAt(startDate, eqId){
   renderCurrentView(); // 화면 즉시 반영
   showToast('붙여넣었습니다. 계속 다른 칸에 붙여넣거나, 배너의 "종료"를 눌러 마치세요.');
 
+  // V1.50.1: 붙여넣기는 그동안 앱 자체 Schedules 시트에만 저장되고 원본 '시험계획표'
+  // 월별 탭에는 전혀 반영되지 않았음(수동 신규 등록의 '원본 반영' 체크박스와 달리 이 경로는
+  // pushToAppInput 호출 자체가 없었음). 배너의 '원본 반영' 체크 여부에 따라 붙여넣기마다
+  // 함께 반영하도록 추가.
+  const pushToAppInputChecked = document.getElementById('clipboard-push-appinput')?.checked;
+
   try {
     const res = await gasPost('saveSchedule', { schedule });
     if (res.status!=='success') throw new Error(res.message||'저장 실패');
+    if (pushToAppInputChecked) pushScheduleToAppInput(schedule); // 완료를 기다리지 않고 백그라운드 진행
   } catch(e){
     schedules = schedules.filter(s=>!sameId(s.id, schedule.id));
     renderCurrentView();
@@ -3417,6 +3488,15 @@ function onFilterChange(){
   filters.search = document.getElementById('filter-search').value.toLowerCase().trim();
   updateFilterEqLabel();
   renderCurrentView();
+}
+// V1.51.0: 검색창은 입력할 때마다 renderCurrentView()가 그대로 불려서, 대시보드 화면에서는
+// 한 글자 입력할 때마다 차트 6개를 전부 destroy 후 재생성하며 눈에 띄게 버벅였음. 타이핑이 잠시
+// 멈췄을 때만(200ms) 실제로 필터를 반영하도록 디바운스 — 그룹/장비 체크박스 등 클릭 기반 필터는
+// 원래도 빈도가 낮아 그대로 onFilterChange()를 즉시 호출.
+let filterSearchDebounceTimer = null;
+function onFilterSearchInput(){
+  clearTimeout(filterSearchDebounceTimer);
+  filterSearchDebounceTimer = setTimeout(onFilterChange, 200);
 }
 function resetFilters(){
   document.getElementById('filter-group').value='all';
@@ -4107,12 +4187,25 @@ function renderTimeline(){
         // 왼쪽 좌표를 고정해두면 배지가 막대 오른쪽 끝을 넘어 다음 날짜 칸까지 삐져나갔음(다음 막대에
         // 가려지는 원인 중 하나). translateX(-100%)로 배지의 "오른쪽 끝"을 막대 오른쪽 끝에 맞추도록 바꿔
         // 텍스트 길이와 무관하게 항상 막대 안쪽으로 붙게 함.
-        delayBadge.style.left = `${offsetDays*CELL_W+3+(spanDays*CELL_W-6)}px`;
+        const barRightEdgePx = offsetDays*CELL_W+3+(spanDays*CELL_W-6);
+        delayBadge.style.left = `${barRightEdgePx}px`;
         delayBadge.style.transform = 'translateX(-100%)';
         delayBadge.style.top = `${6+lane*32-8}px`;
         delayBadge.style.zIndex = '20'; // 겹치는 다른(이후 렌더링되는) 막대에 가려지지 않도록 명시적으로 지정
         delayBadge.innerText = `⚠️ ${getDelayBadgeText(s)}`;
         trackWrap.appendChild(delayBadge);
+        // V1.51.0: 버그수정 — 막대가 타임라인의 첫 번째(가장 왼쪽) 날짜 칸에서 시작하고 짧은 경우,
+        // translateX(-100%)로 오른쪽 끝을 맞추다 보면 배지의 왼쪽 끝이 trackWrap의 시작점(x=0, 좌측
+        // 장비명 칼럼의 오른쪽 경계와 정확히 맞닿는 지점)보다 왼쪽으로 넘어감. trackWrap은
+        // overflow가 보이도록 되어 있어 이 경우 배지가 좌측 sticky 장비명 칼럼(z-index 10) 위로
+        // 삐져나가 겹쳐 보였음(배지 z-index가 더 높음). 배지를 실제로 그린 뒤 폭을 측정해, 왼쪽 끝이
+        // 0보다 작아지면 오른쪽-정렬을 포기하고 대신 막대 시작 지점(왼쪽 끝)에 맞춰(transform 없이)
+        // 배지가 trackWrap 영역 안(장비명 칼럼 바깥)에서만 보이도록 고정.
+        const badgeWidth = delayBadge.offsetWidth;
+        if (barRightEdgePx - badgeWidth < 0){
+          delayBadge.style.left = `${offsetDays*CELL_W+3}px`;
+          delayBadge.style.transform = 'none';
+        }
       }
     });
     row.style.minHeight = `${44+(maxLane+1)*32}px`;
@@ -4204,9 +4297,13 @@ function getDashboardSchedules(){
     return true;
   });
 }
+let lastDashYearsKey = null;
 function populateDashYearOptions(list){
   const sel = document.getElementById('dash-year');
   const years = [...new Set(list.map(s=>(s.startDate||'').slice(0,4)))].filter(Boolean).sort();
+  const yearsKey = years.join(',');
+  if (yearsKey === lastDashYearsKey) return; // V1.51.0: 연도 목록이 그대로면 select를 다시 그리지 않음
+  lastDashYearsKey = yearsKey;
   const prev = sel.value;
   sel.innerHTML = `<option value="all">전체</option>` + years.map(y=>`<option value="${y}">${y}년</option>`).join('');
   const curYear = String(new Date().getFullYear());
@@ -4223,27 +4320,37 @@ function populateDashMonthOptions(){
 function renderDashChart(canvasId, type, labels, datasets, horizontal){
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
-  if (dashCharts[canvasId]) dashCharts[canvasId].destroy();
   const isPie = (type==='doughnut' || type==='pie');
   const isDark = document.documentElement.classList.contains('dark');
   const textColor = isDark ? '#cbd5e1' : '#475569';
   const gridColor = isDark ? 'rgba(148,163,184,.15)' : 'rgba(148,163,184,.25)';
-  dashCharts[canvasId] = new Chart(canvas, {
-    type,
-    data: { labels, datasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      indexAxis: horizontal ? 'y' : 'x',
-      plugins: {
-        legend: { display: isPie, position: 'bottom', labels: { font:{ size:10 }, boxWidth:10, color: textColor } }
-      },
-      scales: isPie ? undefined : {
-        x: { beginAtZero: true, ticks: { font:{ size:10 }, precision:0, color: textColor }, grid:{ color: gridColor } },
-        y: { beginAtZero: true, ticks: { font:{ size:10 }, precision:0, color: textColor }, grid:{ color: gridColor } }
-      }
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: false, // V1.51.0: 대시보드는 renderDashboard() 한 번 호출에 차트 6개가 함께 갱신되므로,
+                       // 기본 애니메이션(트윈)을 켜두면 그 6개가 동시에 그려지며 눈에 띄게 버벅였음.
+    indexAxis: horizontal ? 'y' : 'x',
+    plugins: {
+      legend: { display: isPie, position: 'bottom', labels: { font:{ size:10 }, boxWidth:10, color: textColor } }
+    },
+    scales: isPie ? undefined : {
+      x: { beginAtZero: true, ticks: { font:{ size:10 }, precision:0, color: textColor }, grid:{ color: gridColor } },
+      y: { beginAtZero: true, ticks: { font:{ size:10 }, precision:0, color: textColor }, grid:{ color: gridColor } }
     }
-  });
+  };
+  const existing = dashCharts[canvasId];
+  // V1.51.0: 매번 destroy 후 new Chart()로 재생성하면 캔버스 컨텍스트를 통째로 다시 만드는 비용이
+  // 6개 차트 × 매 렌더링마다 들었음. 차트 종류(type)가 그대로면 데이터/옵션만 바꿔 update()만 호출하도록
+  // 변경 — 다크모드 전환처럼 type은 같고 색상만 바뀌는 경우도 이 경로로 처리됨.
+  if (existing && existing.config.type === type){
+    existing.data.labels = labels;
+    existing.data.datasets = datasets;
+    Object.assign(existing.options, options); // Chart.js 권장 방식: options는 참조를 통째로 바꾸지 않고 병합
+    existing.update('none'); // 'none' = 트랜지션 없이 즉시 반영
+    return;
+  }
+  if (existing) existing.destroy();
+  dashCharts[canvasId] = new Chart(canvas, { type, data: { labels, datasets }, options });
 }
 function renderDashboard(){
   if (typeof Chart === 'undefined'){
@@ -4253,60 +4360,84 @@ function renderDashboard(){
   const list = getDashboardSchedules(); // 년도/월 필터가 이미 반영된 목록
   const selectedYear = document.getElementById('dash-year').value;
   const selectedYearLabel = selectedYear==='all' ? '전체' : selectedYear;
+  const ymNow = fmtISO(new Date()).slice(0,7);
+
+  // V1.51.0: 예전에는 KPI·차트별로 list를 9번 따로 순회했음(연도/월/장비/상태/차종/품목별 집계 각각+
+  // 이번달·변경건수·완료건수 필터 3번, 차종·품목은 parseVehicleAndItem을 항목마다 두 번씩 호출).
+  // 목록 하나로 한 번만 순회하면서 필요한 집계를 모두 함께 만들도록 변경 — 렌더링마다 반복되는
+  // 스캔 횟수를 줄여 대시보드 조작 시 버벅임을 완화.
+  let monthCount=0, changedCount=0, doneCount=0, nonArrivalCount=0;
+  const yearCounts = {}, monthCounts = new Array(12).fill(0), eqCounts = {}, statusCounts = {},
+        vehicleCounts = {}, itemCounts = {}, nonArrivalByEq = {};
+  list.forEach(s=>{
+    const ymd = s.startDate || '';
+    const y = ymd.slice(0,4), m = parseInt(ymd.slice(5,7),10);
+    if (ymd.slice(0,7)===ymNow) monthCount++;
+    if (isChangedSchedule(s)) changedCount++;
+    if (isScheduleCompleted(s)) doneCount++;
+    const isNonArrival = isMasterSchedule(s) && s.status==='미입고';
+    if (isNonArrival) nonArrivalCount++;
+
+    if (y) yearCounts[y] = (yearCounts[y]||0)+1;
+    if (m>=1 && m<=12) monthCounts[m-1]++;
+
+    const eq = getEq(s.eqId);
+    const eqKey = eq ? `${eq.icon} ${eq.name}` : '기타';
+    eqCounts[eqKey] = (eqCounts[eqKey]||0)+1;
+    if (isNonArrival) nonArrivalByEq[eqKey] = (nonArrivalByEq[eqKey]||0)+1;
+
+    const statusLabel = getDisplayStatusLabel(s);
+    statusCounts[statusLabel] = (statusCounts[statusLabel]||0)+1;
+
+    const parsed = parseVehicleAndItem(s.title); // 차종/품목 파싱은 항목당 한 번만
+    const vehicleKey = parsed ? parsed.vehicle : '미분류';
+    vehicleCounts[vehicleKey] = (vehicleCounts[vehicleKey]||0)+1;
+    const itemKey = (parsed && parsed.item) ? parsed.item : '미분류';
+    itemCounts[itemKey] = (itemCounts[itemKey]||0)+1;
+  });
 
   // KPI 카드
   const total = list.length;
-  const ymNow = fmtISO(new Date()).slice(0,7);
-  const monthCount = list.filter(s=>(s.startDate||'').slice(0,7)===ymNow).length;
-  const changedCount = list.filter(isChangedSchedule).length;
-  const doneCount = list.filter(isScheduleCompleted).length;
   document.getElementById('kpi-total').textContent = total;
   document.getElementById('kpi-month').textContent = monthCount;
   document.getElementById('kpi-changed').textContent = changedCount;
   document.getElementById('kpi-done-rate').textContent = total ? `${Math.round(doneCount/total*100)}%` : '0%';
+  document.getElementById('kpi-nonarrival').textContent = nonArrivalCount;
 
   // 연도별 계획건수
-  const yearCounts = {};
-  list.forEach(s=>{ const y=(s.startDate||'').slice(0,4); if(!y) return; yearCounts[y]=(yearCounts[y]||0)+1; });
   const years = Object.keys(yearCounts).sort();
   renderDashChart('chart-yearly', 'bar', years.map(y=>y+'년'), [{ label:'계획건수', data: years.map(y=>yearCounts[y]), backgroundColor:'#6366f1', borderRadius:6 }]);
 
   // 월별 계획건수 추이 (년도 필터가 '전체'면 모든 연도 합산, 특정 연도면 해당 연도만 — list는 이미 년도/월 필터 반영됨)
-  const monthCounts = new Array(12).fill(0);
-  list.forEach(s=>{
-    const m = parseInt((s.startDate||'').slice(5,7), 10);
-    if (m>=1 && m<=12) monthCounts[m-1]++;
-  });
   renderDashChart('chart-monthly', 'line', ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],
     [{ label:`${selectedYearLabel} 계획건수`, data: monthCounts, borderColor:'#0ea5e9', backgroundColor:'rgba(14,165,233,.15)', fill:true, tension:.3, pointRadius:3 }]);
 
   // 시험기(장비)별 계획건수
-  const eqCounts = {};
-  list.forEach(s=>{ const eq=getEq(s.eqId); const key = eq ? `${eq.icon} ${eq.name}` : '기타'; eqCounts[key]=(eqCounts[key]||0)+1; });
   const eqEntries = Object.entries(eqCounts).sort((a,b)=>b[1]-a[1]);
   renderDashChart('chart-equipment', 'bar', eqEntries.map(e=>e[0]),
     [{ label:'계획건수', data: eqEntries.map(e=>e[1]), backgroundColor: eqEntries.map((_,i)=>DASH_PALETTE[i%DASH_PALETTE.length]), borderRadius:5 }], true);
 
   // 진행상태 분포
-  const statusCounts = {};
-  list.forEach(s=>{ const label=getDisplayStatusLabel(s); statusCounts[label]=(statusCounts[label]||0)+1; });
   const statusEntries = Object.entries(statusCounts);
   renderDashChart('chart-status', 'doughnut', statusEntries.map(e=>e[0]),
     [{ data: statusEntries.map(e=>e[1]), backgroundColor: statusEntries.map(e=>DASH_STATUS_COLORS[e[0]]||'#94a3b8') }]);
 
   // 차종별 계획건수 (TOP 10) — 항목명 [대괄호] 표기 기준 파싱
-  const vehicleCounts = {};
-  list.forEach(s=>{ const parsed=parseVehicleAndItem(s.title); const key = parsed ? parsed.vehicle : '미분류'; vehicleCounts[key]=(vehicleCounts[key]||0)+1; });
   const vehicleEntries = Object.entries(vehicleCounts).sort((a,b)=>b[1]-a[1]).slice(0,10);
   renderDashChart('chart-vehicle', 'bar', vehicleEntries.map(e=>e[0]),
     [{ label:'계획건수', data: vehicleEntries.map(e=>e[1]), backgroundColor: vehicleEntries.map((_,i)=>DASH_PALETTE[i%DASH_PALETTE.length]), borderRadius:5 }], true);
 
   // 품목별 계획건수 (TOP 10)
-  const itemCounts = {};
-  list.forEach(s=>{ const parsed=parseVehicleAndItem(s.title); const key = (parsed && parsed.item) ? parsed.item : '미분류'; itemCounts[key]=(itemCounts[key]||0)+1; });
   const itemEntries = Object.entries(itemCounts).sort((a,b)=>b[1]-a[1]).slice(0,10);
   renderDashChart('chart-item', 'bar', itemEntries.map(e=>e[0]),
     [{ label:'계획건수', data: itemEntries.map(e=>e[1]), backgroundColor: itemEntries.map((_,i)=>DASH_PALETTE[i%DASH_PALETTE.length]), borderRadius:5 }], true);
+
+  // V1.51.0: ⚠️ 미입고 현황 — 장비별 (요청 반영). 값이 하나도 없으면 빈 막대 대신 안내 문구만 표시.
+  const nonArrivalEntries = Object.entries(nonArrivalByEq).sort((a,b)=>b[1]-a[1]);
+  const nonArrivalNote = document.getElementById('chart-nonarrival-empty');
+  if (nonArrivalNote) nonArrivalNote.classList.toggle('hidden', nonArrivalEntries.length>0);
+  renderDashChart('chart-nonarrival', 'bar', nonArrivalEntries.map(e=>e[0]),
+    [{ label:'미입고 건수', data: nonArrivalEntries.map(e=>e[1]), backgroundColor:'#94a3b8', borderRadius:5 }], true);
 }
 
 /* ============================================================
