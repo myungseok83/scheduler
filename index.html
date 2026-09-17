@@ -19,7 +19,15 @@ data/options만 갱신 후 update('none')으로 무애니메이션 즉시 반영
 이 세 기능을 쓰는 동안에도 뒤의 달력·타임라인이 계속 보이고 조작 가능함. 자동계획 수립은 기존 우하단
 배치에서 좌상단으로 위치만 이동(기능 동일), 밀어내기 후보 추천·메모/회의록은 화면을 가리던 완전
 차단형 모달에서 이 방식으로 전환. 메모/회의록 모달은 헤더 고정+내부 스크롤 분리 구조(V1.35.0)를
-유지해야 해서 CSS 우선순위를 별도로 지정해 기존 레이아웃이 깨지지 않도록 함.) -->
+유지해야 해서 CSS 우선순위를 별도로 지정해 기존 레이아웃이 깨지지 않도록 함.) (V1.53.0: ① 테이블뷰에 SheetJS 기반 '📥 엑셀 다운로드' 버튼 추가 —
+현재 필터/정렬이 반영된 목록을 그대로 .xlsx로 저장. ② 🔒 자동연동 일정에 '⚠️ 미입고' 버튼을 상태
+팝오버에 추가해 앱에서 직접 미입고로 표시 가능하게 함(완료/진행/복사/재일정/당기기 옆) — 원본
+'시험계획표' 파일의 집계 매크로가 이미 미입고/검증지연 값을 수집하도록 되어 있어야 하며, GAS 백엔드도
+handleUpdateMasterProgressStatus가 이 값들을 허용하도록 별도 업데이트 필요(V1.28.0 GAS 백엔드 참고).
+③ 버그수정 — 타임라인 지연 배지가 좌측 장비명 칼럼 위로 삐져나오는 문제가 V1.51.0 수정 후에도 재현된
+원인 규명: 배지가 아직 문서에 붙기 전(row가 container에 appendChild되기 전)에 offsetWidth를 측정해
+항상 0으로 읽혀 보정이 사실상 동작하지 않았음. 배지를 pendingDelayBadges에 모아뒀다가 렌더링 함수
+맨 끝(모든 행이 실제로 DOM에 붙은 뒤)에 한 번에 폭을 재측정해 보정하도록 변경.) -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -28,6 +36,7 @@ data/options만 갱신 후 update('none')으로 무애니메이션 즉시 반영
 <link rel="icon" type="image/png" href="data:image/png;base64,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">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   body { font-family:'Pretendard', sans-serif; background:linear-gradient(135deg,#f8faff 0%,#eff2f9 100%); }
@@ -271,6 +280,7 @@ data/options만 갱신 후 update('none')으로 무애니메이션 즉시 반영
     <button onclick="setBarProgressStatus('완료')" class="text-[10px] font-bold px-2 py-1 rounded hover:bg-slate-100 whitespace-nowrap">✅ 완료</button>
     <button onclick="setBarProgressStatus('진행')" class="text-[10px] font-bold px-2 py-1 rounded hover:bg-slate-100 whitespace-nowrap">🔵 진행</button>
     <button onclick="setBarProgressStatus('지연')" id="status-popover-delay-btn" class="text-[10px] font-bold px-2 py-1 rounded hover:bg-slate-100 whitespace-nowrap">⚠️ 지연</button>
+    <button onclick="setBarProgressStatus('미입고')" id="status-popover-nonarrival-btn" class="hidden text-[10px] font-bold px-2 py-1 rounded hover:bg-slate-100 whitespace-nowrap">⚠️ 미입고</button>
     <span class="w-px bg-slate-200 my-0.5"></span>
   </span>
   <button onclick="copyHoveredSchedule()" class="text-[10px] font-bold px-2 py-1 rounded hover:bg-indigo-50 text-indigo-600 whitespace-nowrap">📋 복사</button>
@@ -509,6 +519,7 @@ data/options만 갱신 후 update('none')으로 무애니메이션 즉시 반영
   <div id="view-table" class="hidden glass-card rounded-[32px] overflow-hidden p-3 sm:p-6">
     <div class="pb-4 mb-2 border-b border-slate-100 flex justify-between items-center">
       <h2 class="text-lg font-bold text-slate-800">전체 시험 스케줄 목록 <span class="text-indigo-600" id="table-count">(0)</span></h2>
+      <button onclick="exportTableToExcel()" class="shrink-0 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-xs px-3.5 py-2 rounded-xl transition-all">📥 엑셀 다운로드</button>
     </div>
     <div class="overflow-x-auto custom-scrollbar view-scroll-area border border-slate-200 rounded-2xl">
       <table class="w-full text-left border-collapse">
@@ -3006,6 +3017,7 @@ function showStatusPopover(el, scheduleId){
   cancelHideStatusPopover();
   document.getElementById('status-popover-progress-group').classList.toggle('hidden', !showProgress);
   document.getElementById('status-popover-delay-btn').classList.toggle('hidden', isMasterSchedule(s));
+  document.getElementById('status-popover-nonarrival-btn').classList.toggle('hidden', !isMasterSchedule(s));
   document.getElementById('status-popover-reschedule-btn').classList.toggle('hidden', !showReschedule);
   document.getElementById('status-popover-reschedule-divider').classList.toggle('hidden', !showReschedule);
   document.getElementById('status-popover-pull-btn').classList.toggle('hidden', !showPull);
@@ -3070,11 +3082,13 @@ async function setBarProgressStatus(newStatus){
   const target = schedules[idx];
 
   if (isMasterSchedule(target)){
-    // 🔒 마스터 일정: 원본시트 파이프라인이 진행결과 칸에 '완료' 또는 빈 문자열만 인식하고
-    // 그 외 값이 있는 행은 다음 '시험계획누적' 재생성 때 통째로 걸러지므로, '지연'은 지원하지 않는다
-    // (팝오버에서도 마스터 항목은 지연 버튼을 숨겨둠 — showStatusPopover 참고).
-    if (newStatus !== '완료' && newStatus !== '진행') return;
-    const masterValue = newStatus === '완료' ? '완료' : '';
+    // 🔒 마스터 일정: 원본시트 파이프라인(copyAndPasteWithMergedCellsOptimized)이 V1.49.0부터
+    // 진행결과 칸의 '완료'/''/'미입고'/'검증지연' 네 값을 모두 인식하도록 바뀌었으므로, '미입고'도
+    // 이제 앱에서 설정 가능. '지연'은 원본 파이프라인이 인식하는 값이 아니라 여전히 지원하지 않음
+    // (팝오버에서도 마스터 항목은 지연 버튼을 숨기고 대신 미입고 버튼을 보여줌 — showStatusPopover 참고).
+    // ⚠️ 서버(GAS)의 handleUpdateMasterProgressStatus도 함께 '미입고'를 허용하도록 업데이트해야 동작함.
+    if (newStatus !== '완료' && newStatus !== '진행' && newStatus !== '미입고') return;
+    const masterValue = newStatus === '진행' ? '' : newStatus;
     const prevStatus = target.status;
     schedules[idx] = { ...target, status: masterValue };
     renderCurrentView();
@@ -4017,11 +4031,13 @@ async function confirmChangeConfirm(){
 
 let TIMELINE_CELL_W = 180; // 타임라인 날짜 칸 너비 (전역화: 오늘 버튼 스크롤 계산에도 사용, 모바일/태블릿에서는 renderTimeline()이 화면폭에 맞춰 재계산)
 let TIMELINE_LABEL_W = 160; // 좌측 장비명 칼럼 너비 (모바일/태블릿에서는 renderTimeline()이 재계산)
+let pendingDelayBadges = []; // V1.53.0: renderTimeline()이 만든 지연 배지 중 DOM 부착 후 위치 보정이 필요한 것들
 
 function renderTimeline(){
   // 모바일/태블릿 대응 (V1.26.1): 화면 폭에 따라 날짜 칸/장비명 칼럼 너비를 축소해 한눈에 더 많이 보이게 함
   TIMELINE_CELL_W = window.innerWidth < 480 ? 76 : window.innerWidth < 768 ? 100 : window.innerWidth < 1024 ? 140 : 180;
   TIMELINE_LABEL_W = window.innerWidth < 768 ? 88 : 160;
+  pendingDelayBadges = []; // V1.53.0: 이번 렌더링에서 만든 지연 배지들 — 실제로 DOM에 붙은 뒤 위치 보정하기 위해 모아둠
   const container = document.getElementById('timeline-body');
   container.innerHTML='';
   const headerContainer = document.getElementById('timeline-header-inner');
@@ -4205,24 +4221,19 @@ function renderTimeline(){
         // 가려지는 원인 중 하나). translateX(-100%)로 배지의 "오른쪽 끝"을 막대 오른쪽 끝에 맞추도록 바꿔
         // 텍스트 길이와 무관하게 항상 막대 안쪽으로 붙게 함.
         const barRightEdgePx = offsetDays*CELL_W+3+(spanDays*CELL_W-6);
+        const leftAlignPx = offsetDays*CELL_W+3;
         delayBadge.style.left = `${barRightEdgePx}px`;
         delayBadge.style.transform = 'translateX(-100%)';
         delayBadge.style.top = `${6+lane*32-8}px`;
         delayBadge.style.zIndex = '20'; // 겹치는 다른(이후 렌더링되는) 막대에 가려지지 않도록 명시적으로 지정
         delayBadge.innerText = `⚠️ ${getDelayBadgeText(s)}`;
         trackWrap.appendChild(delayBadge);
-        // V1.51.0: 버그수정 — 막대가 타임라인의 첫 번째(가장 왼쪽) 날짜 칸에서 시작하고 짧은 경우,
-        // translateX(-100%)로 오른쪽 끝을 맞추다 보면 배지의 왼쪽 끝이 trackWrap의 시작점(x=0, 좌측
-        // 장비명 칼럼의 오른쪽 경계와 정확히 맞닿는 지점)보다 왼쪽으로 넘어감. trackWrap은
-        // overflow가 보이도록 되어 있어 이 경우 배지가 좌측 sticky 장비명 칼럼(z-index 10) 위로
-        // 삐져나가 겹쳐 보였음(배지 z-index가 더 높음). 배지를 실제로 그린 뒤 폭을 측정해, 왼쪽 끝이
-        // 0보다 작아지면 오른쪽-정렬을 포기하고 대신 막대 시작 지점(왼쪽 끝)에 맞춰(transform 없이)
-        // 배지가 trackWrap 영역 안(장비명 칼럼 바깥)에서만 보이도록 고정.
-        const badgeWidth = delayBadge.offsetWidth;
-        if (barRightEdgePx - badgeWidth < 0){
-          delayBadge.style.left = `${offsetDays*CELL_W+3}px`;
-          delayBadge.style.transform = 'none';
-        }
+        // V1.53.0: 버그수정 — V1.51.0에서 offsetWidth로 겹침 여부를 판단하려 했으나, 이 시점에는
+        // delayBadge가 아직 실제 문서에 붙지 않은 상태(row가 container에 appendChild되는 건 이 루프가
+        // 끝난 뒤라서)라 offsetWidth가 항상 0으로 읽혀 보정이 사실상 전혀 동작하지 않았음(그래서
+        // "여전히" 겹쳐 보였음). 배지 요소 자체를 나중에(실제로 화면에 붙은 뒤) 다시 확인할 수 있도록
+        // pendingDelayBadges에 모아두고, renderTimeline() 맨 끝에서 한 번에 보정한다.
+        pendingDelayBadges.push({ el: delayBadge, barRightEdgePx, leftAlignPx });
       }
     });
     row.style.minHeight = `${44+(maxLane+1)*32}px`;
@@ -4230,6 +4241,16 @@ function renderTimeline(){
     container.appendChild(row);
     } catch(err){
       console.error('타임라인 장비행 렌더링 오류:', err);
+    }
+  });
+
+  // V1.53.0: 이 시점에는 모든 장비 행이 container에 실제로 붙어 있어 offsetWidth가 정확히 읽힘.
+  // 오른쪽-정렬(translateX(-100%)) 배지 중 왼쪽 끝이 trackWrap 시작점(0, 좌측 장비명 칼럼 바로
+  // 오른쪽 경계)보다 왼쪽으로 넘어가는 것만 왼쪽-정렬로 전환해 장비명 칼럼 위로 삐져나오지 않게 함.
+  pendingDelayBadges.forEach(({el, barRightEdgePx, leftAlignPx})=>{
+    if (barRightEdgePx - el.offsetWidth < 0){
+      el.style.left = `${leftAlignPx}px`;
+      el.style.transform = 'none';
     }
   });
 }
@@ -4278,6 +4299,40 @@ function renderTable(){
       </td>`;
     tbody.appendChild(tr);
   });
+}
+
+// V1.53.0: 테이블뷰에 보이는 것과 동일한 필터/정렬 기준으로 엑셀(.xlsx) 다운로드
+function exportTableToExcel(){
+  if (typeof XLSX === 'undefined'){
+    showToast('엑셀 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인해주세요.');
+    return;
+  }
+  let filtered = getFilteredSchedules();
+  filtered.sort((a,b)=>{
+    let vA=a[tableSort.col], vB=b[tableSort.col];
+    if (tableSort.col==='startDate') { vA=new Date(vA); vB=new Date(vB); }
+    return tableSort.dir==='asc' ? (vA>vB?1:-1) : (vA<vB?1:-1);
+  });
+  const rows = filtered.map(s=>{
+    const eq = getEq(s.eqId);
+    const end = new Date(s.startDate); end.setDate(end.getDate()+(parseInt(s.duration)||1)-1);
+    const locked = isMasterSchedule(s);
+    return {
+      '항목명': s.title,
+      '장비': eq ? `${eq.icon} ${eq.name}` : '-',
+      '담당자': locked ? '업무현황' : (s.owner||'-'),
+      '기간(일)': s.duration,
+      '시작일': s.startDate,
+      '종료일': fmtISO(end),
+      '상태': getDisplayStatusLabel(s),
+      '자동연동': locked ? 'Y' : ''
+    };
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{wch:28},{wch:14},{wch:12},{wch:8},{wch:12},{wch:12},{wch:10},{wch:8}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '시험계획');
+  XLSX.writeFile(wb, `시험계획_${todayStr()}.xlsx`);
 }
 
 /* ============================================================
