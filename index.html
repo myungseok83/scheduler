@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- 시험 스케줄 관리 시스템 V1.65.0 (🛡️ 중요 품목 접두어 목록(IMPORTANT_ITEM_PREFIXES)에 'DPT' 추가 — 기존 HL/RCI/RCO/RCL/F_FOG에 이어 6개로 확장. isImportantItem을 그대로 공유하는 두 곳(🔀 밀어내기 보호 등급 A/B/C 판정, 🎯 배광UNIT 소요시간 미입력 항목의 추정치)에 동시에 반영됨.)
+<!-- 시험 스케줄 관리 시스템 V1.66.0 (🎯 배광UNIT 소요시간 추정치를 placeholder가 아니라 입력칸 실제 값으로 자동 채우도록 변경 — schBeamHoursAutoFilled 플래그로 자동채움 상태를 추적, 사용자가 직접 값을 고치면(oninput) 그 뒤로는 자동 재계산이 덮어쓰지 않고, 명시적으로 저장된 값이 있는 수정 모달에서도 자동채움이 덮어쓰지 않음. 항목명/시작일/기간 변경 시에도 실시간으로 추정치 재계산(oninput/onchange 추가). 🔗 "시험계획표에도 반영" 체크박스 제거 — 일정 등록 모달(sch-push-appinput)과 자동계획 수립 모달(auto-push-appinput) 둘 다에서 체크박스를 없애고 기본 동작(항상 반영)으로 고정.)
+     시험 스케줄 관리 시스템 V1.65.0 (🛡️ 중요 품목 접두어 목록(IMPORTANT_ITEM_PREFIXES)에 'DPT' 추가 — 기존 HL/RCI/RCO/RCL/F_FOG에 이어 6개로 확장. isImportantItem을 그대로 공유하는 두 곳(🔀 밀어내기 보호 등급 A/B/C 판정, 🎯 배광UNIT 소요시간 미입력 항목의 추정치)에 동시에 반영됨.)
      시험 스케줄 관리 시스템 V1.64.0 (🎯 배광UNIT(배광1호/2호) 하루 12시간 용량 기반 밀어내기/일정등록 지원 — 원본 시트가 배광UNIT을 "우선순위 1~4호" 병렬 슬롯으로 관리해 하루에 여러 건이 동시에 진행되는데(하루 12시간 가용), 앱의 밀어내기·자동계획 로직은 겹침=무조건 불가로 오판해 사소한 조정 하나가 몇십 건씩 연쇄로 밀리는 버그가 있었음(구글드라이브 연동으로 원본 시트를 직접 열어 확인). 데이터 모델: 일정에 'dailyHours'(하루 소요시간) 필드 추가 — 앱 등록 일정은 Schedules 시트 컬럼에, 🔒 마스터 일정은 안정 키(eqId+rawContent) 기반 별도 시트 'MasterHours'에 저장(GAS V1.30.0, setMasterHours 액션). 소요시간 미입력 레거시 항목은 품목 중요도(HL/RCL/RCI/RCO/F_FOG, isImportantItem 재사용)와 마지막날 여부로 정해지는 고정 추정치를 사용(1일짜리 또는 마지막날 아닌 날: 중요품목 12시간/그 외 5시간, 2일 이상 계획의 마지막날: 중요품목 7시간/그 외 4시간) — estimateDailyHoursOnDate. 일정 등록/수정 모달에 배광UNIT 선택 시에만 "하루 소요시간" 입력칸 노출(필수, placeholder로 추정치 안내), 저장 시 하루 총 사용시간이 12시간을 넘으면 경고 모달(그래도 저장 가능). 밀어내기 모달도 배광UNIT 대상이면 같은 입력칸이 뜨고, 겹침 기반 커서 캐스케이드(computeReflowCascade) 대신 날짜별 용량 초과 여부만 확인해 필요한 경우에만(원래 시작일이 가장 늦은 항목부터) 옮기는 전용 계산(computeReflowCascadeBeamUnit)으로 분기. 자동계획 수립은 이번 범위에서 제외(추후 별도 진행). isEquipmentFreeRange도 배광UNIT이면 후보 소요시간을 받아 용량 기준으로 판정하도록 확장(다른 장비는 기존과 동일, 넘기지 않으면 기존처럼 종일 점유로 엄격 판정).)
      시험 스케줄 관리 시스템 V1.62.0 (🔀 밀어내기 결과 화면 재정리 — ① 미니 간트 미리보기를 더 크게(dayWidth 20→30, 행 높이 30→38, 표시영역 최대높이 220→400px, 막대에 항목명 라벨 표시) 키우고 모달 폭도 max-w-lg→max-w-3xl로 확장. ② 건별 체크박스로 반영 여부를 고르던 텍스트 목록을 없애고, 문제없는 항목은 전부 자동 반영되도록 변경 — 지그 충돌 항목만 사유 입력을 필수로 요구(기존과 동일), 보호대상 과다밀림(D+4일 초과) 항목은 경고만 표시하고 입력은 불필요. 근접/원거리(reflow-far) 구분과 그 토글 UI 전체 제거, 상단에 "확인이 필요한 N건(나머지는 자동 반영)" 요약 문구만 남기고 문제 있는 항목만 카드로 나열. confirmReflowBatch도 체크박스 대신 reflowState.changes 전체를 반영 대상으로 처리하도록 수정.)
      시험 스케줄 관리 시스템 V1.61.0 (🔀 밀어내기 결과에 텍스트 목록 위쪽으로 미니 간트 미리보기(reflow-preview-wrap) 추가 — 신규/이동 대상 본인과 밀리는 모든 일정(근접/원거리 전체)을 시간순 가로 막대로 한 화면에 표시. 점선 테두리 막대=반영 전 위치, 채워진 막대=반영 후 위치(빨강=지그 충돌, 파랑=대상 본인, 인디고=일반 밀림), 상단에 주 단위(월요일 기준) 날짜 눈금. 좌측엔 일정명 라벨을 스크롤 동기화된 별도 열로 고정. renderReflowResult 안에서 함께 호출되므로 대안 적용(applyReflowAlternative) 시에도 자동 갱신됨. 순수 텍스트 목록만으로는 전후 변화를 한눈에 파악하기 어렵다는 피드백 반영, 기존 텍스트 목록(near/far)은 건별 체크박스·사유 입력 등 상세 조작용으로 그대로 유지.)
@@ -570,18 +571,18 @@
     </div>
     <input id="sch-id" type="hidden">
     <div class="space-y-4">
-      <div><label class="field-label">항목명</label><input id="sch-title" class="field-input text-lg font-bold"></div>
+      <div><label class="field-label">항목명</label><input id="sch-title" oninput="toggleScheduleBeamHoursField()" class="field-input text-lg font-bold"></div>
       <div class="grid grid-cols-2 gap-3">
         <div><label class="field-label">사용 장비</label><select id="sch-eqid" onchange="toggleScheduleBeamHoursField()" class="field-input"></select></div>
         <div><label class="field-label">담당자</label><input id="sch-owner" class="field-input"></div>
       </div>
       <div class="grid grid-cols-2 gap-3">
-        <div><label class="field-label">시작일</label><input id="sch-start" type="date" class="field-input"></div>
-        <div><label class="field-label">기간(일)</label><input id="sch-duration" type="number" min="1" class="field-input"></div>
+        <div><label class="field-label">시작일</label><input id="sch-start" type="date" onchange="toggleScheduleBeamHoursField()" class="field-input"></div>
+        <div><label class="field-label">기간(일)</label><input id="sch-duration" type="number" min="1" oninput="toggleScheduleBeamHoursField()" class="field-input"></div>
       </div>
       <div id="sch-beam-hours-wrap" class="hidden">
         <label class="field-label">🎯 하루 소요시간(시간) <span class="text-slate-400 font-normal normal-case">— 배광UNIT은 하루 12시간을 여러 건이 나눠 씁니다</span></label>
-        <input id="sch-beam-hours" type="number" min="0.5" step="0.5" max="12" class="field-input" placeholder="예: 2">
+        <input id="sch-beam-hours" type="number" min="0.5" step="0.5" max="12" oninput="schBeamHoursAutoFilled=false" class="field-input" placeholder="예: 2">
       </div>
       <div><label class="field-label">상세 설명</label><textarea id="sch-desc" rows="4" class="field-input resize-none"></textarea></div>
       <div id="sch-protected-wrap" class="hidden">
@@ -612,12 +613,6 @@
             🟠 보수 <span class="font-normal text-amber-100">(일부 조건 사용 가능)</span>
           </label>
         </div>
-      </div>
-      <div id="sch-push-appinput-wrap" class="hidden">
-        <label class="flex items-center gap-2 text-xs font-bold text-slate-600 bg-slate-50 rounded-xl p-3 cursor-pointer">
-          <input type="checkbox" id="sch-push-appinput" class="w-4 h-4">
-          🔗 시험계획표에도 반영 — 체크하면 저장 즉시 해당 월별 탭의 빈 칸에도 채워집니다
-        </label>
       </div>
       <div id="sch-change-reason-wrap" class="hidden">
         <label class="field-label">변경 사유 (선택, 내용을 바꾼 경우 기록됩니다)</label>
@@ -770,9 +765,8 @@
     <div id="auto-result-box" class="hidden mt-5 bg-emerald-50 border border-emerald-100 rounded-xl p-4">
       <p id="auto-result-text" class="text-sm font-bold text-emerald-700 mb-3"></p>
       <div id="auto-result-list" class="space-y-1.5 mb-3 max-h-40 overflow-y-auto custom-scrollbar"></div>
-      <label class="flex items-center gap-2 text-[11px] font-bold text-slate-600 bg-white rounded-lg p-2.5 mb-3 cursor-pointer">
-        <input type="checkbox" id="auto-push-appinput" class="w-4 h-4">
-        🔗 시험계획표에도 반영
+      <label class="flex items-center gap-2 text-[11px] font-bold text-slate-600 bg-white rounded-lg p-2.5 mb-3">
+        🔗 시험계획표에도 반영됩니다
       </label>
       <div class="flex justify-end gap-2">
         <button onclick="resetAutoScheduleResult()" class="py-2 px-4 bg-white text-slate-600 border border-slate-200 font-bold text-xs rounded-lg hover:bg-slate-50">다시 찾기</button>
@@ -3177,12 +3171,11 @@ function resetAutoScheduleResult(){
   autoScheduleResult = null;
   document.getElementById('auto-result-box').classList.add('hidden');
   document.getElementById('auto-result-error').classList.add('hidden');
-  document.getElementById('auto-push-appinput').checked = false;
 }
 
 async function confirmAutoScheduleSave(){
   if (!autoScheduleResult || !autoScheduleResult.length) return;
-  const pushToAppInput = document.getElementById('auto-push-appinput').checked;
+  const pushToAppInput = true; // V1.66.0: "시험계획표에도 반영"은 기본값으로 확정, 체크박스 제거
   const schedulesToSave = autoScheduleResult.map((r,idx)=>({
     id: `${Date.now()}_${idx}_${Math.random().toString(36).slice(2,7)}`,
     title: r.title,
@@ -4827,9 +4820,11 @@ function openScheduleModal(mode, data){
   document.getElementById('sch-protect-reason').value = data.protectReason || '';
   toggleProtectedReasonField();
 
-  // V1.63.0: 🎯 배광UNIT 전용 "하루 소요시간" — 명시값이 있으면 그대로, 없으면(마스터 레거시 등) 빈칸으로
-  // 두되 현재 추정치를 placeholder로 안내(추정치를 실제 값처럼 보이게 채워넣지 않도록 주의)
-  document.getElementById('sch-beam-hours').value = getExplicitDailyHours(data) ?? '';
+  // V1.66.0: 🎯 배광UNIT 전용 "하루 소요시간" — 명시값이 있으면 그대로 채우고 자동재계산 잠금(false),
+  // 없으면 빈칸에서 시작해 toggleScheduleBeamHoursField가 추정치로 자동 채우도록 함(true)
+  const explicitHours = getExplicitDailyHours(data);
+  document.getElementById('sch-beam-hours').value = explicitHours ?? '';
+  schBeamHoursAutoFilled = (explicitHours === null);
   toggleScheduleBeamHoursField();
 
   // 결과 리뷰: 기존 일정(저장된 적 있는 항목)에만 표시 — 새 일정 등록 시에는 아직 리뷰할 대상이 없으므로 숨김
@@ -4846,8 +4841,7 @@ function openScheduleModal(mode, data){
   document.getElementById('sch-save-btn').classList.toggle('hidden', editingScheduleReadOnly);
   document.getElementById('sch-delete-btn').classList.toggle('hidden', locked || mode!=='edit' || !canEdit());
   document.getElementById('sch-change-reason-wrap').classList.toggle('hidden', mode!=='edit');
-  document.getElementById('sch-push-appinput-wrap').classList.toggle('hidden', mode!=='new');
-  document.getElementById('sch-push-appinput').checked = false;
+  // V1.66.0: "시험계획표에도 반영"은 항상 기본 동작이 됨(체크박스 제거) — 별도 토글 불필요
   // V1.55.0: 장비 고장/정비 등록 체크박스 — 신규 등록에서 실제 장비(휴일/이벤트 제외)를 고를 때만 노출
   const maintOk = mode==='new' && data.eqId!=='holiday' && data.eqId!=='event';
   document.getElementById('sch-maintenance-wrap').classList.toggle('hidden', !maintOk);
@@ -4931,8 +4925,11 @@ function toggleProtectedReasonField(){
   const checked = document.getElementById('sch-protected').checked;
   document.getElementById('sch-protect-reason-wrap').classList.toggle('hidden', !checked);
 }
-// V1.63.0: 배광UNIT 장비 선택 시에만 "하루 소요시간" 입력칸 노출. placeholder로 이 항목 자체의
-// 추정치를 안내(품목 중요도+기간의 마지막날 여부로 정해짐, V1.64.0 규칙표 재사용).
+// V1.66.0: 배광UNIT 장비 선택 시에만 "하루 소요시간" 입력칸 노출. 조건에 맞으면(품목 중요도+기간의
+// 마지막날 여부, V1.64.0 규칙표) 추정치를 입력칸에 실제 값으로 자동 채운다(placeholder가 아니라
+// value). 사용자가 직접 값을 고치면(schBeamHoursAutoFilled=false) 그 뒤로는 자동 재계산이 값을
+// 덮어쓰지 않고, 명시적으로 저장된 값이 있을 때도(수정 모달) 자동 채움이 덮어쓰지 않는다.
+let schBeamHoursAutoFilled = true;
 function toggleScheduleBeamHoursField(){
   const eq = getEq(document.getElementById('sch-eqid').value);
   const wrap = document.getElementById('sch-beam-hours-wrap');
@@ -4941,26 +4938,15 @@ function toggleScheduleBeamHoursField(){
   if (!show) return;
   const startVal = document.getElementById('sch-start').value;
   const input = document.getElementById('sch-beam-hours');
-  if (startVal){
-    const tempSchedule = { title: document.getElementById('sch-title').value, startDate: startVal, duration: document.getElementById('sch-duration').value || 1 };
-    const est = estimateDailyHoursOnDate(tempSchedule, startVal);
-    input.placeholder = `추정 약 ${est}시간(품목/기간 기준 — 직접 입력 권장)`;
-  } else {
-    input.placeholder = '예: 2';
-  }
+  if (!startVal){ input.placeholder = '예: 2'; return; }
+  const tempSchedule = { title: document.getElementById('sch-title').value, startDate: startVal, duration: document.getElementById('sch-duration').value || 1 };
+  const est = estimateDailyHoursOnDate(tempSchedule, startVal);
+  input.placeholder = `추정 약 ${est}시간`;
+  if (schBeamHoursAutoFilled){ input.value = est; schBeamHoursAutoFilled = true; } // value 세팅은 input 이벤트를 안 일으키므로 플래그 유지
 }
 function toggleMaintenanceMode(){
   const isMaint = document.getElementById('sch-is-maintenance').checked;
-  const pushWrap = document.getElementById('sch-push-appinput-wrap');
   document.getElementById('sch-maintenance-type-wrap').classList.toggle('hidden', !isMaint); // V1.57.0: 고장/보수 유형 선택 노출
-  if (isMaint){
-    pushWrap.classList.add('hidden');
-    document.getElementById('sch-push-appinput').checked = false;
-  } else if (!document.getElementById('sch-maintenance-wrap').classList.contains('hidden')) {
-    // 마스터/휴일 등 애초에 노출 대상이 아닌 경우까지 다시 열지 않도록, maintenance 체크박스 자체가
-    // 노출된(=신규+실제장비) 상황에서만 push-appinput을 되살림
-    pushWrap.classList.remove('hidden');
-  }
 }
 async function saveScheduleFromModal(){
   let title = document.getElementById('sch-title').value.trim();
@@ -5006,7 +4992,7 @@ async function saveScheduleFromModal(){
     schedule.dailyHours = hoursVal;
   }
   const reason = document.getElementById('sch-change-reason').value.trim();
-  const pushToAppInput = !idVal && !isMaintenanceNew && document.getElementById('sch-push-appinput').checked; // 신규 등록 + 고장/정비가 아닌 경우에만 해당
+  const pushToAppInput = !idVal && !isMaintenanceNew; // V1.66.0: "시험계획표에도 반영"은 신규 등록+고장/정비 아닌 경우 항상 기본 동작(체크박스 제거)
 
   // V1.32.0: 🔒 업무현황 자동연동(마스터) 일정 — 앱 자체 Schedules 시트가 아니라
   // 원본 '시험계획표' 월별 탭 셀에 직접 반영해야 하므로 별도 경로로 분기.
