@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- 시험 스케줄 관리 시스템 V1.66.0 (🎯 배광UNIT 소요시간 추정치를 placeholder가 아니라 입력칸 실제 값으로 자동 채우도록 변경 — schBeamHoursAutoFilled 플래그로 자동채움 상태를 추적, 사용자가 직접 값을 고치면(oninput) 그 뒤로는 자동 재계산이 덮어쓰지 않고, 명시적으로 저장된 값이 있는 수정 모달에서도 자동채움이 덮어쓰지 않음. 항목명/시작일/기간 변경 시에도 실시간으로 추정치 재계산(oninput/onchange 추가). 🔗 "시험계획표에도 반영" 체크박스 제거 — 일정 등록 모달(sch-push-appinput)과 자동계획 수립 모달(auto-push-appinput) 둘 다에서 체크박스를 없애고 기본 동작(항상 반영)으로 고정.)
+<!-- 시험 스케줄 관리 시스템 V1.67.0 (🔁 미입고/검증지연 항목 "재일정 수립" 기능 추가 — 기존 "⏪ 당기기"(오늘~현재 시작일 사이의 빈 자리, 과거 방향)와 반대로 오늘 이후 미래(60일 이내)에서 빈 자리를 찾는 전용 호버 버튼 "📅 재일정 수립"을 계획막대 상태 팝오버에 추가(isRescheduleEligible = 관리자+isScheduleDelayed+!rescheduled). 원본 시트의 미입고 상태는 절대 건드리지 않는다는 요구사항에 맞춰, 기존 항목을 "이동"시키지 않고 같은 제목/장비로 새 일정을 별도 생성(saveSchedule)한 뒤, 원래 항목에는 "재일정 수립됨" 표시만 남김 — 앱 등록 일정은 Schedules 시트 'rescheduled' 컬럼에, 🔒 마스터 일정은 안정 키(eqId+rawContent) 기반 별도 시트 'MasterReschedule'에 저장(GAS V1.31.0, setMasterReschedule 액션). 표시가 남으면 ⚠️ 배지는 그대로 유지(원본 상태 그대로이므로)하되, 계획막대의 빨간 점선 강조(needsReschedule = isScheduleDelayed && !rescheduled)만 사라져 "이미 재일정 잡음"을 구분. 빈 자리가 없으면 밀어내기 후보 추천(신규 등록 모드, 차종/품목 자동 파싱해 미리 채움)으로 자동 연결.)
+     시험 스케줄 관리 시스템 V1.66.0 (🎯 배광UNIT 소요시간 추정치를 placeholder가 아니라 입력칸 실제 값으로 자동 채우도록 변경 — schBeamHoursAutoFilled 플래그로 자동채움 상태를 추적, 사용자가 직접 값을 고치면(oninput) 그 뒤로는 자동 재계산이 덮어쓰지 않고, 명시적으로 저장된 값이 있는 수정 모달에서도 자동채움이 덮어쓰지 않음. 항목명/시작일/기간 변경 시에도 실시간으로 추정치 재계산(oninput/onchange 추가). 🔗 "시험계획표에도 반영" 체크박스 제거 — 일정 등록 모달(sch-push-appinput)과 자동계획 수립 모달(auto-push-appinput) 둘 다에서 체크박스를 없애고 기본 동작(항상 반영)으로 고정.)
      시험 스케줄 관리 시스템 V1.65.0 (🛡️ 중요 품목 접두어 목록(IMPORTANT_ITEM_PREFIXES)에 'DPT' 추가 — 기존 HL/RCI/RCO/RCL/F_FOG에 이어 6개로 확장. isImportantItem을 그대로 공유하는 두 곳(🔀 밀어내기 보호 등급 A/B/C 판정, 🎯 배광UNIT 소요시간 미입력 항목의 추정치)에 동시에 반영됨.)
      시험 스케줄 관리 시스템 V1.64.0 (🎯 배광UNIT(배광1호/2호) 하루 12시간 용량 기반 밀어내기/일정등록 지원 — 원본 시트가 배광UNIT을 "우선순위 1~4호" 병렬 슬롯으로 관리해 하루에 여러 건이 동시에 진행되는데(하루 12시간 가용), 앱의 밀어내기·자동계획 로직은 겹침=무조건 불가로 오판해 사소한 조정 하나가 몇십 건씩 연쇄로 밀리는 버그가 있었음(구글드라이브 연동으로 원본 시트를 직접 열어 확인). 데이터 모델: 일정에 'dailyHours'(하루 소요시간) 필드 추가 — 앱 등록 일정은 Schedules 시트 컬럼에, 🔒 마스터 일정은 안정 키(eqId+rawContent) 기반 별도 시트 'MasterHours'에 저장(GAS V1.30.0, setMasterHours 액션). 소요시간 미입력 레거시 항목은 품목 중요도(HL/RCL/RCI/RCO/F_FOG, isImportantItem 재사용)와 마지막날 여부로 정해지는 고정 추정치를 사용(1일짜리 또는 마지막날 아닌 날: 중요품목 12시간/그 외 5시간, 2일 이상 계획의 마지막날: 중요품목 7시간/그 외 4시간) — estimateDailyHoursOnDate. 일정 등록/수정 모달에 배광UNIT 선택 시에만 "하루 소요시간" 입력칸 노출(필수, placeholder로 추정치 안내), 저장 시 하루 총 사용시간이 12시간을 넘으면 경고 모달(그래도 저장 가능). 밀어내기 모달도 배광UNIT 대상이면 같은 입력칸이 뜨고, 겹침 기반 커서 캐스케이드(computeReflowCascade) 대신 날짜별 용량 초과 여부만 확인해 필요한 경우에만(원래 시작일이 가장 늦은 항목부터) 옮기는 전용 계산(computeReflowCascadeBeamUnit)으로 분기. 자동계획 수립은 이번 범위에서 제외(추후 별도 진행). isEquipmentFreeRange도 배광UNIT이면 후보 소요시간을 받아 용량 기준으로 판정하도록 확장(다른 장비는 기존과 동일, 넘기지 않으면 기존처럼 종일 점유로 엄격 판정).)
      시험 스케줄 관리 시스템 V1.62.0 (🔀 밀어내기 결과 화면 재정리 — ① 미니 간트 미리보기를 더 크게(dayWidth 20→30, 행 높이 30→38, 표시영역 최대높이 220→400px, 막대에 항목명 라벨 표시) 키우고 모달 폭도 max-w-lg→max-w-3xl로 확장. ② 건별 체크박스로 반영 여부를 고르던 텍스트 목록을 없애고, 문제없는 항목은 전부 자동 반영되도록 변경 — 지그 충돌 항목만 사유 입력을 필수로 요구(기존과 동일), 보호대상 과다밀림(D+4일 초과) 항목은 경고만 표시하고 입력은 불필요. 근접/원거리(reflow-far) 구분과 그 토글 UI 전체 제거, 상단에 "확인이 필요한 N건(나머지는 자동 반영)" 요약 문구만 남기고 문제 있는 항목만 카드로 나열. confirmReflowBatch도 체크박스 대신 reflowState.changes 전체를 반영 대상으로 처리하도록 수정.)
@@ -256,6 +257,8 @@
   <button onclick="copyHoveredSchedule()" class="text-[10px] font-bold px-2 py-1 rounded hover:bg-indigo-50 text-indigo-600 whitespace-nowrap">📋 복사</button>
   <span id="status-popover-pull-divider" class="w-px bg-slate-200 my-0.5"></span>
   <button id="status-popover-pull-btn" onclick="pullHoveredSchedule()" class="text-[10px] font-bold px-2 py-1 rounded hover:bg-sky-50 text-sky-600 whitespace-nowrap">⏪ 당기기</button>
+  <span id="status-popover-reschedule-divider" class="w-px bg-slate-200 my-0.5"></span>
+  <button id="status-popover-reschedule-btn" onclick="rescheduleHoveredSchedule()" class="text-[10px] font-bold px-2 py-1 rounded hover:bg-emerald-50 text-emerald-600 whitespace-nowrap">📅 재일정 수립</button>
 </div>
 <!-- 계획막대 복사 후 붙여넣기 대기 상태를 알려주는 배너 -->
 <div id="clipboard-banner" class="hidden fixed left-1/2 -translate-x-1/2 top-3 z-[600] bg-indigo-600 text-white text-xs font-bold pl-4 pr-2 py-2 rounded-full shadow-lg items-center gap-2 max-w-[92vw]" style="display:none;">
@@ -2042,12 +2045,41 @@ function openPullShortcut(scheduleId){
   }
 }
 
-let pullSlotContext = null;
-function showPullSlotPicker(s, slots){
+// V1.67.0: 🔁 재일정 수립 — 당기기와 반대 방향(오늘 이후 미래)에서 빈 자리를 찾는다. 기존 미입고
+// 건은 원본 그대로 두고(진행결과 셀 안 건드림), 같은 제목/장비로 새 일정을 하나 만든 뒤 원래
+// 건에는 "재일정 수립됨" 표시만 남겨(needsReschedule이 꺼지도록) 계획막대 강조가 없어지게 한다.
+function openRescheduleShortcut(scheduleId){
+  const s = schedules.find(x=>sameId(x.id, scheduleId));
+  if (!s) return;
   const eq = getEq(s.eqId);
-  pullSlotContext = { scheduleId: s.id, slots };
-  document.getElementById('pull-slots-desc').textContent =
-    `${s.title} · ${eq?eq.icon:''} ${eq?eq.name:''} — 오늘부터 현재 시작일(${s.startDate}) 사이의 빈 자리입니다. 하나를 선택하면 바로 이동합니다.`;
+  const testDays = reflowTestDaysOf(s, eq);
+  const today = parseLocalDate(todayStr());
+  const rangeEnd = reflowAddDays(today, 60); // 앞으로 60일 이내에서 탐색
+  const slots = findReflowEmptySlots(s, eq, testDays, today, rangeEnd, 6);
+  if (slots.length > 0){
+    showPullSlotPicker(s, slots, 'reschedule');
+  } else {
+    showToast('앞으로 60일 이내에 빈 자리가 없어, 밀어내기 후보 추천(신규 등록)으로 넘어갑니다.');
+    openReflowModal();
+    switchReflowMode('new');
+    const parsed = parseVehicleAndItem(s.title);
+    document.getElementById('reflow-vehicle').value = parsed ? parsed.vehicle : '';
+    document.getElementById('reflow-item').value = parsed ? parsed.item : s.title;
+    document.getElementById('reflow-eq').value = s.eqId;
+    onReflowEqChange();
+    document.getElementById('reflow-start').value = todayStr();
+    document.getElementById('reflow-duration').value = testDays;
+  }
+}
+
+let pullSlotContext = null;
+function showPullSlotPicker(s, slots, mode){
+  mode = mode || 'pull';
+  const eq = getEq(s.eqId);
+  pullSlotContext = { scheduleId: s.id, slots, mode };
+  document.getElementById('pull-slots-desc').textContent = mode==='reschedule'
+    ? `${s.title} · ${eq?eq.icon:''} ${eq?eq.name:''} — 오늘부터 60일 이내의 빈 자리입니다. 하나를 선택하면 같은 내용으로 새 일정이 만들어지고(원래 미입고 건은 그대로 남습니다), 배지 없이 정상 반영됩니다.`
+    : `${s.title} · ${eq?eq.icon:''} ${eq?eq.name:''} — 오늘부터 현재 시작일(${s.startDate}) 사이의 빈 자리입니다. 하나를 선택하면 바로 이동합니다.`;
   document.getElementById('pull-slots-list').innerHTML = slots.map((p,i)=>`
     <button type="button" onclick="applyPullSlot(${i})" class="w-full text-left text-xs font-bold bg-sky-50 hover:bg-sky-100 border border-sky-100 rounded-xl px-3 py-2.5 text-sky-700 transition-colors">
       ${fmtISO(p.start)} ~ ${fmtISO(p.end)} <span class="text-slate-400 font-semibold">(${p.duration}일)</span>
@@ -2062,6 +2094,33 @@ async function applyPullSlot(index){
   const idx = schedules.findIndex(s=>sameId(s.id, ctx.scheduleId));
   if (idx===-1) return;
   const before = schedules[idx];
+  if (ctx.mode==='reschedule'){
+    closeModal('modal-pull-slots');
+    const newId = `${Date.now()}_resched_${Math.random().toString(36).slice(2,7)}`;
+    const newSchedule = { id:newId, title: before.title, eqId: before.eqId, startDate: fmtISO(placed.start), duration: placed.duration,
+      owner: before.owner||'', desc: before.desc||'', status:'active', createdBy: currentUser.username, progressStatus:'진행' };
+    schedules.push(newSchedule);
+    renderCurrentView();
+    showToast('새 일정을 만들었습니다.');
+    try {
+      const res = await gasPost('saveSchedule', { schedule: newSchedule });
+      if (res.status!=='success') throw new Error(res.message||'저장 실패');
+      // 원래 미입고 건에는 "재일정 수립됨" 표시만 남김(원본 셀/상태는 그대로 유지)
+      if (isMasterSchedule(before)){
+        if (before.rawContent){
+          const res2 = await gasPost('setMasterReschedule', { eqId: before.eqId, rawContent: before.rawContent, rescheduled: true, updatedBy: currentUser.username });
+          if (res2.status==='success'){ const bidx = schedules.findIndex(s=>sameId(s.id, before.id)); if (bidx>-1) schedules[bidx] = {...schedules[bidx], rescheduled:true}; }
+        }
+      } else {
+        const updated = { ...before, rescheduled: true };
+        const bidx = schedules.findIndex(s=>sameId(s.id, before.id));
+        if (bidx>-1) schedules[bidx] = updated;
+        await gasPost('saveSchedule', { schedule: updated });
+      }
+      renderCurrentView();
+    } catch(e){ showToast('저장 중 오류가 발생했습니다: '+e.message); }
+    return;
+  }
   const updated = { ...before, startDate: fmtISO(placed.start), duration: placed.duration };
   schedules[idx] = updated;
   closeModal('modal-pull-slots');
@@ -3213,6 +3272,19 @@ function isPullEligible(s){
   return isAdmin() && !isHolidayOrEventType(s) && !isMaintenanceRecord(s)
     && s.eqId!==ATTENDANCE_EQID && s.eqId!==ATTENDANCE_CONFIG_EQID && s.eqId!==RESULT_REVIEW_EQID;
 }
+// V1.67.0: 🔁 "재일정 수립" 단축 버튼을 쓸 수 있는 대상인지 — 미입고/검증지연(isScheduleDelayed) 상태이면서
+// 아직 재일정을 안 만든(!s.rescheduled) 경우만. 방향이 당기기와 반대(오늘 이후 미래에서 빈 자리를 찾음)라
+// 별도 버튼으로 분리.
+function isRescheduleEligible(s){
+  return isAdmin() && !isHolidayOrEventType(s) && !isMaintenanceRecord(s)
+    && s.eqId!==ATTENDANCE_EQID && s.eqId!==ATTENDANCE_CONFIG_EQID && s.eqId!==RESULT_REVIEW_EQID
+    && isScheduleDelayed(s) && !s.rescheduled;
+}
+// 미입고 등으로 재일정이 필요한데 아직 안 만든 경우 — 계획막대에 눈에 띄는 강조를 준다(재일정 만들면 사라짐,
+// ⚠️ 배지 자체는 원본 상태 그대로라 계속 남아있음)
+function needsReschedule(s){
+  return isScheduleDelayed(s) && !s.rescheduled;
+}
 function isHolidayOrEventType(s){ return s && (s.eqId==='holiday' || s.eqId==='event'); }
 function isHolidayType(s){ return s && s.eqId==='holiday'; } // 이 타입만 세로열 전체에 빨간 음영 적용
 // 특정 날짜가 '휴일' 타입에 걸리는지 빠르게 조회하기 위한 날짜 집합 생성
@@ -3318,13 +3390,16 @@ function showStatusPopover(el, scheduleId){
   if (!s) return;
   const showProgress = canSetProgressStatus(s);
   const showPull = isPullEligible(s);
-  if (!showProgress && !showPull) return;
+  const showReschedule = isRescheduleEligible(s);
+  if (!showProgress && !showPull && !showReschedule) return;
   hoveredScheduleId = scheduleId;
   cancelHideStatusPopover();
   document.getElementById('status-popover-progress-group').classList.toggle('hidden', !showProgress);
   document.getElementById('status-popover-delay-btn').classList.toggle('hidden', isMasterSchedule(s));
   document.getElementById('status-popover-pull-btn').classList.toggle('hidden', !showPull);
   document.getElementById('status-popover-pull-divider').classList.toggle('hidden', !showPull);
+  document.getElementById('status-popover-reschedule-btn').classList.toggle('hidden', !showReschedule);
+  document.getElementById('status-popover-reschedule-divider').classList.toggle('hidden', !showReschedule);
   const pop = document.getElementById('status-popover');
   const rect = el.getBoundingClientRect();
   pop.style.left = `${Math.max(4, rect.left)}px`;
@@ -3348,6 +3423,13 @@ function pullHoveredSchedule(){
   document.getElementById('status-popover').classList.add('hidden');
   hoveredScheduleId = null;
   openPullShortcut(id);
+}
+function rescheduleHoveredSchedule(){
+  if (!hoveredScheduleId) return;
+  const id = hoveredScheduleId;
+  document.getElementById('status-popover').classList.add('hidden');
+  hoveredScheduleId = null;
+  openRescheduleShortcut(id);
 }
 
 async function setBarProgressStatus(newStatus){
@@ -3968,7 +4050,8 @@ function renderCalendar(){
         chip.className = `calendar-item-chip ${getBarColorClass(s, eq)}`;
         chip.innerText = `${isScheduleDelayed(s)?'⚠️ ':''}${eq?eq.icon:''} ${isMasterSchedule(s)?'🔒 ':''}${isScheduleCompleted(s)?'✅ ':''}${s.title}`;
         chip.onclick=(ev)=>{ ev.stopPropagation(); openScheduleModal(canEdit()?'edit':'view', s); };
-        if (canSetProgressStatus(s) || isPullEligible(s)){
+        if (needsReschedule(s)){ chip.style.outline = '1.5px dashed #f43f5e'; chip.style.outlineOffset = '1px'; }
+        if (canSetProgressStatus(s) || isPullEligible(s) || isRescheduleEligible(s)){
           chip.addEventListener('mouseenter', ()=>showStatusPopover(chip, s.id));
           chip.addEventListener('mouseleave', scheduleHideStatusPopover);
         }
@@ -4014,7 +4097,8 @@ function renderCalendar(){
       bar.title = `${locked?'[업무현황 자동연동] ':''}${s.title} (${s.startDate}, ${s.duration}일)${getStatusDisplayText(s)?' · '+getStatusDisplayText(s):''}`;
       bar.innerText = `${locked?'🔒 ':''}${isScheduleCompleted(s)?'✅ ':''}${eq?eq.icon:''} ${s.title}`;
       bar.onclick=(ev)=>{ ev.stopPropagation(); openScheduleModal(canEdit()?'edit':'view', s); };
-      if (canSetProgressStatus(s) || isPullEligible(s)){
+      if (needsReschedule(s)){ bar.style.outline = '2px dashed #f43f5e'; bar.style.outlineOffset = '1px'; } // V1.67.0: 재일정 필요 강조(수립되면 사라짐)
+      if (canSetProgressStatus(s) || isPullEligible(s) || isRescheduleEligible(s)){
         bar.addEventListener('mouseenter', ()=>showStatusPopover(bar, s.id));
         bar.addEventListener('mouseleave', scheduleHideStatusPopover);
       }
@@ -4468,7 +4552,8 @@ function renderTimeline(){
       trackWrap.style.position='relative';
       trackWrap.appendChild(bar);
       attachBarDragHandlers(bar, s, CELL_W, ()=>suppressBarClick=true);
-      if (canSetProgressStatus(s) || isPullEligible(s)){
+      if (needsReschedule(s)){ bar.style.outline = '2px dashed #f43f5e'; bar.style.outlineOffset = '1px'; } // V1.67.0
+      if (canSetProgressStatus(s) || isPullEligible(s) || isRescheduleEligible(s)){
         bar.addEventListener('mouseenter', ()=>showStatusPopover(bar, s.id));
         bar.addEventListener('mouseleave', scheduleHideStatusPopover);
       }
