@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- 시험 스케줄 관리 시스템 V1.68.0 (⏪ 당기기/단축 호버 버튼이 이미 시작일이 지난(오늘 이하) 일정에도 떠서 눌러도 "더 당길 수 없습니다" 토스트만 뜨던 문제 수정 — isPullEligible에 시작일이 오늘보다 미래인 경우만 조건 추가. 이미 지난 일정은 당길 데가 없으니 애초에 버튼이 안 뜨고, 같은 항목이 미입고/검증지연 상태라 재일정이 필요하면 "📅 재일정 수립" 버튼은 그대로 뜸(당기기와 별개 조건).)
+<!-- 시험 스케줄 관리 시스템 V1.69.0 (🎯🌙 배광UNIT 24시간(주간12h+야간12h) 실제 가동 모델 도입 — 원래 하루 12시간 소프트 상한만 있던 것을, 실제로는 24시간 근무체계(주간=일반 의뢰건 계획, 야간=양산품 정기시험 배경가동, capa 부족 시 야간 자리에 의뢰건 대체 편성)라는 운영 방식을 반영. 판단 기준을 사람이 매번 정하기보다, 밀어내기 모달에 이미 있던 소요시간 규칙(명시값 우선, 없으면 품목/기간 추정치)을 당기기·재일정 수립에도 그대로 재사용하고, 빈 자리 탐색을 2단계로 변경 — findReflowEmptySlots가 배광UNIT이면 ① 주간(12h) 안에서만 먼저 찾고 ② 하나도 없을 때만 야간 포함 24h로 재탐색(findBeamUnitEmptySlots 신설), 결과에 isNight 플래그를 달아 당기기/재일정 수립 슬롯 선택 화면에 🌙 배지로 표시. 이동/생성 확정 시 이때 쓴 소요시간을 dailyHours 명시값으로 확정 저장(앱 saveSchedule / 마스터 setMasterHours). 밀어내기 모달의 배광UNIT 전용 캐스케이드(computeReflowCascadeBeamUnit)도 동일하게 findNextFit을 2단계(주간→야간)로, ensureDayFits의 판정 기준을 12h→24h(BEAM_UNIT_HARD_CAPACITY)로 변경. 일정 등록/수정 모달의 저장 시 용량 경고(checkBeamUnitCapacityViolation)도 12h 초과가 아니라 24h(물리적 한계) 초과일 때만 뜨도록 완화 — 12~24h 구간은 야간 대체 편성으로 보고 마찰 없이 그냥 저장됨. 다만 "어떤 기존 항목이 이미 야간에 배정된 것인지"를 과거 데이터에서 자동으로 역추정하는 기능(캘린더/타임라인 막대의 상시 🌙 배지)은 판단 기준이 인위적일 수밖에 없어 이번 범위에서는 보류 — 이 도구들을 통해 새로 배치되는 항목만 그 순간에 확실히 알 수 있으므로 그 경우에만 표시.)
+     시험 스케줄 관리 시스템 V1.68.0 (⏪ 당기기/단축 호버 버튼이 이미 시작일이 지난(오늘 이하) 일정에도 떠서 눌러도 "더 당길 수 없습니다" 토스트만 뜨던 문제 수정 — isPullEligible에 시작일이 오늘보다 미래인 경우만 조건 추가. 이미 지난 일정은 당길 데가 없으니 애초에 버튼이 안 뜨고, 같은 항목이 미입고/검증지연 상태라 재일정이 필요하면 "📅 재일정 수립" 버튼은 그대로 뜸(당기기와 별개 조건).)
      시험 스케줄 관리 시스템 V1.67.0 (🔁 미입고/검증지연 항목 "재일정 수립" 기능 추가 — 기존 "⏪ 당기기"(오늘~현재 시작일 사이의 빈 자리, 과거 방향)와 반대로 오늘 이후 미래(60일 이내)에서 빈 자리를 찾는 전용 호버 버튼 "📅 재일정 수립"을 계획막대 상태 팝오버에 추가(isRescheduleEligible = 관리자+isScheduleDelayed+!rescheduled). 원본 시트의 미입고 상태는 절대 건드리지 않는다는 요구사항에 맞춰, 기존 항목을 "이동"시키지 않고 같은 제목/장비로 새 일정을 별도 생성(saveSchedule)한 뒤, 원래 항목에는 "재일정 수립됨" 표시만 남김 — 앱 등록 일정은 Schedules 시트 'rescheduled' 컬럼에, 🔒 마스터 일정은 안정 키(eqId+rawContent) 기반 별도 시트 'MasterReschedule'에 저장(GAS V1.31.0, setMasterReschedule 액션). 표시가 남으면 ⚠️ 배지는 그대로 유지(원본 상태 그대로이므로)하되, 계획막대의 빨간 점선 강조(needsReschedule = isScheduleDelayed && !rescheduled)만 사라져 "이미 재일정 잡음"을 구분. 빈 자리가 없으면 밀어내기 후보 추천(신규 등록 모드, 차종/품목 자동 파싱해 미리 채움)으로 자동 연결.)
      시험 스케줄 관리 시스템 V1.66.0 (🎯 배광UNIT 소요시간 추정치를 placeholder가 아니라 입력칸 실제 값으로 자동 채우도록 변경 — schBeamHoursAutoFilled 플래그로 자동채움 상태를 추적, 사용자가 직접 값을 고치면(oninput) 그 뒤로는 자동 재계산이 덮어쓰지 않고, 명시적으로 저장된 값이 있는 수정 모달에서도 자동채움이 덮어쓰지 않음. 항목명/시작일/기간 변경 시에도 실시간으로 추정치 재계산(oninput/onchange 추가). 🔗 "시험계획표에도 반영" 체크박스 제거 — 일정 등록 모달(sch-push-appinput)과 자동계획 수립 모달(auto-push-appinput) 둘 다에서 체크박스를 없애고 기본 동작(항상 반영)으로 고정.)
      시험 스케줄 관리 시스템 V1.65.0 (🛡️ 중요 품목 접두어 목록(IMPORTANT_ITEM_PREFIXES)에 'DPT' 추가 — 기존 HL/RCI/RCO/RCL/F_FOG에 이어 6개로 확장. isImportantItem을 그대로 공유하는 두 곳(🔀 밀어내기 보호 등급 A/B/C 판정, 🎯 배광UNIT 소요시간 미입력 항목의 추정치)에 동시에 반영됨.)
@@ -673,7 +674,7 @@
 <div id="modal-beam-capacity" class="modal-overlay">
   <div class="glass-card bg-white w-full max-w-sm rounded-[32px] p-5 sm:p-8">
     <h3 class="text-lg font-bold text-amber-600 mb-1">🎯 배광UNIT 하루 용량 초과</h3>
-    <p class="text-xs text-slate-500 font-semibold mb-4">배광UNIT은 하루 12시간이 가용시간입니다. 아래 날짜는 이 일정을 포함하면 12시간을 넘습니다.</p>
+    <p class="text-xs text-slate-500 font-semibold mb-4">배광UNIT은 주간(12시간)+야간(12시간) 합쳐 하루 24시간이 실제 가동 상한입니다. 아래 날짜는 이 일정을 포함하면 24시간을 넘습니다 — 물리적으로 다 못 채웁니다.</p>
     <div id="beam-capacity-summary" class="bg-amber-50 border border-amber-100 rounded-xl p-3 text-xs text-amber-700 font-bold mb-5 space-y-1"></div>
     <div class="flex gap-2 justify-end">
       <button onclick="resolveBeamCapacity(false)" class="py-2.5 px-5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200">취소</button>
@@ -1863,7 +1864,7 @@ function checkBeamUnitCapacityViolation(schedule){
     const dateStr = fmtISO(d);
     const usage = beamUnitUsageOnDate(schedule.eqId, dateStr, schedules, schedule.id);
     const total = usage + need;
-    if (total > BEAM_UNIT_DAILY_CAPACITY + 1e-9) overDays.push({ date: dateStr, usage, total });
+    if (total > BEAM_UNIT_HARD_CAPACITY + 1e-9) overDays.push({ date: dateStr, usage, total }); // V1.69.0: 24시간(주간+야간) 넘을 때만 경고 — 12~24시간은 야간 대체 편성으로 보고 그냥 반영(무마찰)
   }
   return overDays.length ? { overDays } : null;
 }
@@ -1991,8 +1992,18 @@ function reflowPlaceRespectingWorkdays(eq, candidateStart, testDays){
 
 // 오늘부터 rangeEnd 사이, 이 장비에서 testDays(시험일수)를 그대로 채울 수 있는 '빈 자리'들을 찾음
 // (다른 일정과 안 겹치고, 지그 충돌도 없는 자리만 후보로 인정. 근무일 규칙은 reflowPlaceRespectingWorkdays 재사용)
+// V1.69.0: 배광UNIT은 겹침이 아니라 용량 기준 — 1차로 주간(12h) 안에서만 찾고, 하나도 없으면
+// 2차로 야간까지(24h) 포함해서 찾아 그 결과에 isNight:true를 붙인다(당기기/재일정 수립/밀어내기
+// 빈자리 탐색이 전부 이 함수를 재사용하므로 세 기능 모두 동일하게 적용됨). 소요시간은 밀어내기
+// 모달과 동일한 규칙(getEffectiveDailyHours: 명시값 우선, 없으면 품목/기간 추정치)을 그대로 재사용.
 function findReflowEmptySlots(schedule, eq, testDays, rangeStart, rangeEnd, maxResults){
   const pool = schedules.filter(s=>s.status!=='deleted');
+  if (isBeamUnit(eq)){
+    const dailyHours = getEffectiveDailyHours(schedule, schedule.startDate);
+    const dayOnly = findBeamUnitEmptySlots(schedule, eq, dailyHours, testDays, rangeStart, rangeEnd, BEAM_UNIT_DAILY_CAPACITY, maxResults, pool);
+    if (dayOnly.length) return dayOnly.map(p=>({...p, isNight:false}));
+    return findBeamUnitEmptySlots(schedule, eq, dailyHours, testDays, rangeStart, rangeEnd, BEAM_UNIT_HARD_CAPACITY, maxResults, pool).map(p=>({...p, isNight:true}));
+  }
   const eqOthers = pool.filter(s=>s.eqId===schedule.eqId && !sameId(s.id, schedule.id) && !isRepairRecord(s)); // V1.57.0: 보수 기간은 빈 자리로 간주
   const results = [];
   let cursor = new Date(rangeStart);
@@ -2003,6 +2014,34 @@ function findReflowEmptySlots(schedule, eq, testDays, rangeStart, rangeEnd, maxR
     if (placed.end > rangeEnd) break;
     const blocked = eqOthers.some(s=> reflowOverlaps(placed.start, placed.duration, parseLocalDate(s.startDate), s.duration));
     if (!blocked){
+      const probe = { id: schedule.id, eqId: schedule.eqId, title: schedule.title, startDate: fmtISO(placed.start), duration: placed.duration };
+      const jig = findJigConflictsInPool(probe, schedule.id, pool.map(s=> sameId(s.id, schedule.id) ? probe : s));
+      if (!jig){
+        results.push(placed);
+        cursor = reflowAddDays(placed.end, 1);
+        continue;
+      }
+    }
+    cursor = reflowAddDays(cursor, 1);
+  }
+  return results;
+}
+
+// V1.69.0: 배광UNIT 전용 빈 자리 탐색 — 용량(ceilingHours) 기준으로, testDays 근무일 구간 전체가
+// 매일 [기존 사용시간 + 이 항목의 소요시간] <= ceilingHours를 만족하는 위치만 후보로 인정.
+function findBeamUnitEmptySlots(schedule, eq, dailyHours, testDays, rangeStart, rangeEnd, ceilingHours, maxResults, pool){
+  const results = [];
+  let cursor = new Date(rangeStart);
+  let guard = 0;
+  while (cursor <= rangeEnd && results.length < maxResults && guard < 400){
+    guard++;
+    const placed = reflowPlaceRespectingWorkdays(eq, cursor, testDays);
+    if (placed.end > rangeEnd) break;
+    let fits = true;
+    for (let d = new Date(placed.start); d <= placed.end; d.setDate(d.getDate()+1)){
+      if (beamUnitUsageOnDate(schedule.eqId, fmtISO(d), pool, schedule.id) + dailyHours > ceilingHours + 1e-9){ fits = false; break; }
+    }
+    if (fits){
       const probe = { id: schedule.id, eqId: schedule.eqId, title: schedule.title, startDate: fmtISO(placed.start), duration: placed.duration };
       const jig = findJigConflictsInPool(probe, schedule.id, pool.map(s=> sameId(s.id, schedule.id) ? probe : s));
       if (!jig){
@@ -2078,12 +2117,14 @@ function showPullSlotPicker(s, slots, mode){
   mode = mode || 'pull';
   const eq = getEq(s.eqId);
   pullSlotContext = { scheduleId: s.id, slots, mode };
+  const anyNight = slots.some(p=>p.isNight);
+  const nightNote = anyNight ? ' 🌙 표시된 날짜는 주간(12시간) 자리가 없어 야간(정기시험) 시간대까지 포함한 자리입니다.' : '';
   document.getElementById('pull-slots-desc').textContent = mode==='reschedule'
-    ? `${s.title} · ${eq?eq.icon:''} ${eq?eq.name:''} — 오늘부터 60일 이내의 빈 자리입니다. 하나를 선택하면 같은 내용으로 새 일정이 만들어지고(원래 미입고 건은 그대로 남습니다), 배지 없이 정상 반영됩니다.`
-    : `${s.title} · ${eq?eq.icon:''} ${eq?eq.name:''} — 오늘부터 현재 시작일(${s.startDate}) 사이의 빈 자리입니다. 하나를 선택하면 바로 이동합니다.`;
+    ? `${s.title} · ${eq?eq.icon:''} ${eq?eq.name:''} — 오늘부터 60일 이내의 빈 자리입니다. 하나를 선택하면 같은 내용으로 새 일정이 만들어지고(원래 미입고 건은 그대로 남습니다), 배지 없이 정상 반영됩니다.${nightNote}`
+    : `${s.title} · ${eq?eq.icon:''} ${eq?eq.name:''} — 오늘부터 현재 시작일(${s.startDate}) 사이의 빈 자리입니다. 하나를 선택하면 바로 이동합니다.${nightNote}`;
   document.getElementById('pull-slots-list').innerHTML = slots.map((p,i)=>`
-    <button type="button" onclick="applyPullSlot(${i})" class="w-full text-left text-xs font-bold bg-sky-50 hover:bg-sky-100 border border-sky-100 rounded-xl px-3 py-2.5 text-sky-700 transition-colors">
-      ${fmtISO(p.start)} ~ ${fmtISO(p.end)} <span class="text-slate-400 font-semibold">(${p.duration}일)</span>
+    <button type="button" onclick="applyPullSlot(${i})" class="w-full text-left text-xs font-bold ${p.isNight?'bg-indigo-50 hover:bg-indigo-100 border-indigo-100 text-indigo-700':'bg-sky-50 hover:bg-sky-100 border-sky-100 text-sky-700'} border rounded-xl px-3 py-2.5 transition-colors">
+      ${p.isNight?'🌙 ':''}${fmtISO(p.start)} ~ ${fmtISO(p.end)} <span class="text-slate-400 font-semibold">(${p.duration}일)</span>
     </button>`).join('');
   openModal('modal-pull-slots');
 }
@@ -2100,6 +2141,7 @@ async function applyPullSlot(index){
     const newId = `${Date.now()}_resched_${Math.random().toString(36).slice(2,7)}`;
     const newSchedule = { id:newId, title: before.title, eqId: before.eqId, startDate: fmtISO(placed.start), duration: placed.duration,
       owner: before.owner||'', desc: before.desc||'', status:'active', createdBy: currentUser.username, progressStatus:'진행' };
+    if (isBeamUnit(getEq(before.eqId))) newSchedule.dailyHours = getEffectiveDailyHours(before, before.startDate); // V1.69.0
     schedules.push(newSchedule);
     renderCurrentView();
     showToast('새 일정을 만들었습니다.');
@@ -2123,6 +2165,7 @@ async function applyPullSlot(index){
     return;
   }
   const updated = { ...before, startDate: fmtISO(placed.start), duration: placed.duration };
+  if (isBeamUnit(getEq(before.eqId))) updated.dailyHours = getEffectiveDailyHours(before, before.startDate); // V1.69.0: 이동 시 사용한 소요시간을 명시값으로 확정
   schedules[idx] = updated;
   closeModal('modal-pull-slots');
   renderCurrentView();
@@ -2132,6 +2175,9 @@ async function applyPullSlot(index){
       const res = await gasPost('updateMasterSchedule', { schedule: updated, original: before });
       if (res.status!=='success') throw new Error(res.message||'반영 실패');
       if (res.warning) showToast(`⚠️ ${res.warning}`);
+      if (updated.dailyHours!=null && before.rawContent){ // V1.69.0: 배광UNIT 마스터 일정은 별도 저장소에도 기록
+        gasPost('setMasterHours', { eqId: before.eqId, rawContent: before.rawContent, dailyHours: updated.dailyHours, updatedBy: currentUser.username }).catch(()=>{});
+      }
       await loadAllData(); // 마스터 일정은 재생성 시 셀 위치(행 번호)가 바뀔 수 있어 전체 재로딩
     } else {
       const res = await gasPost('saveSchedule', { schedule: updated });
@@ -2233,17 +2279,20 @@ function computeReflowCascadeBeamUnit(eqId, desiredStart, duration, desiredDaily
   const HORIZON = 400;
 
   function findNextFit(fromDate, need, testDays, excludeThisId){
-    let candidate = new Date(fromDate);
-    let attempts = 0;
-    while (attempts < HORIZON){
-      const end = reflowEndDate(candidate, testDays);
-      let ok = true;
-      for (let d = new Date(candidate); d <= end; d.setDate(d.getDate()+1)){
-        if (beamUnitUsageOnDate(eqId, fmtISO(d), simPool, excludeThisId) + need > BEAM_UNIT_DAILY_CAPACITY + 1e-9){ ok=false; break; }
+    // V1.69.0: 주간(12h) 먼저 찾고, 지평선 안에서 못 찾으면 그때만 야간까지(24h) 포함해서 찾는다
+    for (const ceiling of [BEAM_UNIT_DAILY_CAPACITY, BEAM_UNIT_HARD_CAPACITY]){
+      let candidate = new Date(fromDate);
+      let attempts = 0;
+      while (attempts < HORIZON){
+        const end = reflowEndDate(candidate, testDays);
+        let ok = true;
+        for (let d = new Date(candidate); d <= end; d.setDate(d.getDate()+1)){
+          if (beamUnitUsageOnDate(eqId, fmtISO(d), simPool, excludeThisId) + need > ceiling + 1e-9){ ok=false; break; }
+        }
+        if (ok) return { start: new Date(candidate), duration: testDays };
+        candidate.setDate(candidate.getDate()+1);
+        attempts++;
       }
-      if (ok) return { start: new Date(candidate), duration: testDays };
-      candidate.setDate(candidate.getDate()+1);
-      attempts++;
     }
     return { start: new Date(fromDate), duration: testDays }; // 안전장치(도달 안 함)
   }
@@ -2251,7 +2300,7 @@ function computeReflowCascadeBeamUnit(eqId, desiredStart, duration, desiredDaily
   function ensureDayFits(dateStr, extraNeed, excludeThisId){
     let guard = 0;
     while (guard++ < 20){
-      if (beamUnitUsageOnDate(eqId, dateStr, simPool, excludeThisId) + extraNeed <= BEAM_UNIT_DAILY_CAPACITY + 1e-9) return;
+      if (beamUnitUsageOnDate(eqId, dateStr, simPool, excludeThisId) + extraNeed <= BEAM_UNIT_HARD_CAPACITY + 1e-9) return; // V1.69.0: 24시간(주간+야간) 기준
       const covering = simPool.filter(s=> s.eqId===eqId && s.status!=='deleted' && !isMaintenanceRecord(s)
         && !sameId(s.id, excludeThisId) && !moved[String(s.id)]
         && isDateInRange(dateStr, s.startDate, s.duration));
@@ -3073,17 +3122,22 @@ function resolveWeekendConflict(choice){
 /* ---------- 가용성 계산 ---------- */
 // extraSchedules: 아직 저장 전, 같은 배치 내에서 임시로 확보된 일정들도 함께 검사 (V1.26.0)
 // V1.63.0: candidateDailyHours를 넘기면(배광UNIT 전용) 겹침 여부가 아니라 그 기간 각 날짜의
-// 누적 사용시간(+이 후보의 소요시간)이 12시간을 넘는지로 판정한다. 넘기지 않으면(기존 호출부인
+// 누적 사용시간(+이 후보의 소요시간)이 상한을 넘는지로 판정한다. 넘기지 않으면(기존 호출부인
 // 자동계획 수립 등) 종일(=BEAM_UNIT_DAILY_CAPACITY) 점유로 간주해 기존과 동일하게 엄격히 판정한다.
+// V1.69.0: candidateDailyHours가 있을 때(수동 등록/밀어내기 등 시간 인지 경로)만 상한을
+// 24시간(BEAM_UNIT_HARD_CAPACITY, 주간+야간 실제 가동시간)까지 허용 — 12시간 초과분은 야간
+// 정기시험 자리를 대신 쓰는 것으로 보고 🌙 배지로만 구분 표시(needsNightBadge). candidateDailyHours가
+// 없는 기존 자동계획 수립 경로는 그대로 12시간 기준 엄격 판정 유지(이번 변경 범위 밖).
 function isEquipmentFreeRange(eqId, startDate, endDate, extraSchedules, candidateDailyHours){
   const pool = (extraSchedules && extraSchedules.length) ? schedules.concat(extraSchedules) : schedules;
   const eq = getEq(eqId);
   if (isBeamUnit(eq)){
     const need = (candidateDailyHours!=null) ? Number(candidateDailyHours) : BEAM_UNIT_DAILY_CAPACITY;
+    const ceiling = (candidateDailyHours!=null) ? BEAM_UNIT_HARD_CAPACITY : BEAM_UNIT_DAILY_CAPACITY;
     let d = new Date(startDate);
     while (d <= endDate){
       const usage = beamUnitUsageOnDate(eqId, fmtISO(d), pool, null);
-      if (usage + need > BEAM_UNIT_DAILY_CAPACITY + 1e-9) return false;
+      if (usage + need > ceiling + 1e-9) return false;
       d.setDate(d.getDate()+1);
     }
     return true;
@@ -3338,7 +3392,8 @@ function getMaintenanceType(s){ if (!isMaintenanceRecord(s)) return null; return
 // V1.63.0: 🎯 배광UNIT(배광1호/2호)은 원본 시트에서 "우선순위 1~4호" 병렬 슬롯으로 관리되는 장비라,
 // 하루 12시간 가용시간을 여러 항목이 나눠 쓴다(항목마다 실제 사용시간이 다름 — 30분~하루 이상).
 // 다른 장비(오븐/2룸/환경챔버 등)도 원본상 병렬 슬롯 구조지만, 이번 개선은 배광UNIT만 적용 범위로 함.
-const BEAM_UNIT_DAILY_CAPACITY = 12; // 시간
+const BEAM_UNIT_DAILY_CAPACITY = 12; // 시간 — 주간 기준값(이 이상은 야간 대체 편성으로 봄)
+const BEAM_UNIT_HARD_CAPACITY = 24; // V1.69.0: 시간 — 실제 가동 상한(주간 12h+야간 12h, 24시간 근무체계)
 function isBeamUnit(eq){ return !!(eq && eq.group === '배광UNIT'); }
 // 명시적으로 입력된 소요시간(없으면 null)
 function getExplicitDailyHours(schedule){
