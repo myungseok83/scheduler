@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- 시험 스케줄 관리 시스템 V1.69.0 (🎯🌙 배광UNIT 24시간(주간12h+야간12h) 실제 가동 모델 도입 — 원래 하루 12시간 소프트 상한만 있던 것을, 실제로는 24시간 근무체계(주간=일반 의뢰건 계획, 야간=양산품 정기시험 배경가동, capa 부족 시 야간 자리에 의뢰건 대체 편성)라는 운영 방식을 반영. 판단 기준을 사람이 매번 정하기보다, 밀어내기 모달에 이미 있던 소요시간 규칙(명시값 우선, 없으면 품목/기간 추정치)을 당기기·재일정 수립에도 그대로 재사용하고, 빈 자리 탐색을 2단계로 변경 — findReflowEmptySlots가 배광UNIT이면 ① 주간(12h) 안에서만 먼저 찾고 ② 하나도 없을 때만 야간 포함 24h로 재탐색(findBeamUnitEmptySlots 신설), 결과에 isNight 플래그를 달아 당기기/재일정 수립 슬롯 선택 화면에 🌙 배지로 표시. 이동/생성 확정 시 이때 쓴 소요시간을 dailyHours 명시값으로 확정 저장(앱 saveSchedule / 마스터 setMasterHours). 밀어내기 모달의 배광UNIT 전용 캐스케이드(computeReflowCascadeBeamUnit)도 동일하게 findNextFit을 2단계(주간→야간)로, ensureDayFits의 판정 기준을 12h→24h(BEAM_UNIT_HARD_CAPACITY)로 변경. 일정 등록/수정 모달의 저장 시 용량 경고(checkBeamUnitCapacityViolation)도 12h 초과가 아니라 24h(물리적 한계) 초과일 때만 뜨도록 완화 — 12~24h 구간은 야간 대체 편성으로 보고 마찰 없이 그냥 저장됨. 다만 "어떤 기존 항목이 이미 야간에 배정된 것인지"를 과거 데이터에서 자동으로 역추정하는 기능(캘린더/타임라인 막대의 상시 🌙 배지)은 판단 기준이 인위적일 수밖에 없어 이번 범위에서는 보류 — 이 도구들을 통해 새로 배치되는 항목만 그 순간에 확실히 알 수 있으므로 그 경우에만 표시.)
+<!-- 시험 스케줄 관리 시스템 V1.70.0 (🌙 배광UNIT 기존 일정에도 주간/야간 소급 자동판정 추가 — 마스터 일정 id('master_행번호')에 원본 시트 우선순위 행 번호가 그대로 들어있는 점을 이용해, 같은 날짜에 걸린 1일짜리 항목들을 행 번호 오름차순(=우선순위 1에 가까울수록 먼저)으로 채워나가다 누적 12시간을 넘기는 시점부터 야간으로 판정(computeIsNightAuto). 2일 이상 계획은 방침상 항상 주간 고정(밀어내기 대상 임시 의뢰건이 아니라 이미 자리잡은 정규 계획으로 봄). 앱 등록 일정(행 번호 없음)은 마스터보다 뒤에 두고 id 오름차순 동률처리. 캘린더 단일일 칩과 타임라인 막대(1일짜리만 해당)에 🌙 표시. 자동판정이 틀렸을 때를 위해 "주간/야간 수동 지정" 기능도 추가 — 일정 등록/수정 모달의 배광UNIT 소요시간 입력란 아래 "🌙 시간대: 자동 판정/🔆 주간 고정/🌙 야간 고정" 선택 추가(isNightShift가 수동 지정을 자동판정보다 우선 적용). 앱 등록 일정은 Schedules 시트 'shiftOverride' 컬럼에, 🔒 마스터 일정은 안정 키(eqId+rawContent) 기반 별도 시트 'MasterShift'에 저장(GAS V1.32.0, setMasterShift 액션).)
+     시험 스케줄 관리 시스템 V1.69.0 (🎯🌙 배광UNIT 24시간(주간12h+야간12h) 실제 가동 모델 도입 — 원래 하루 12시간 소프트 상한만 있던 것을, 실제로는 24시간 근무체계(주간=일반 의뢰건 계획, 야간=양산품 정기시험 배경가동, capa 부족 시 야간 자리에 의뢰건 대체 편성)라는 운영 방식을 반영. 판단 기준을 사람이 매번 정하기보다, 밀어내기 모달에 이미 있던 소요시간 규칙(명시값 우선, 없으면 품목/기간 추정치)을 당기기·재일정 수립에도 그대로 재사용하고, 빈 자리 탐색을 2단계로 변경 — findReflowEmptySlots가 배광UNIT이면 ① 주간(12h) 안에서만 먼저 찾고 ② 하나도 없을 때만 야간 포함 24h로 재탐색(findBeamUnitEmptySlots 신설), 결과에 isNight 플래그를 달아 당기기/재일정 수립 슬롯 선택 화면에 🌙 배지로 표시. 이동/생성 확정 시 이때 쓴 소요시간을 dailyHours 명시값으로 확정 저장(앱 saveSchedule / 마스터 setMasterHours). 밀어내기 모달의 배광UNIT 전용 캐스케이드(computeReflowCascadeBeamUnit)도 동일하게 findNextFit을 2단계(주간→야간)로, ensureDayFits의 판정 기준을 12h→24h(BEAM_UNIT_HARD_CAPACITY)로 변경. 일정 등록/수정 모달의 저장 시 용량 경고(checkBeamUnitCapacityViolation)도 12h 초과가 아니라 24h(물리적 한계) 초과일 때만 뜨도록 완화 — 12~24h 구간은 야간 대체 편성으로 보고 마찰 없이 그냥 저장됨. 다만 "어떤 기존 항목이 이미 야간에 배정된 것인지"를 과거 데이터에서 자동으로 역추정하는 기능(캘린더/타임라인 막대의 상시 🌙 배지)은 판단 기준이 인위적일 수밖에 없어 이번 범위에서는 보류 — 이 도구들을 통해 새로 배치되는 항목만 그 순간에 확실히 알 수 있으므로 그 경우에만 표시.)
      시험 스케줄 관리 시스템 V1.68.0 (⏪ 당기기/단축 호버 버튼이 이미 시작일이 지난(오늘 이하) 일정에도 떠서 눌러도 "더 당길 수 없습니다" 토스트만 뜨던 문제 수정 — isPullEligible에 시작일이 오늘보다 미래인 경우만 조건 추가. 이미 지난 일정은 당길 데가 없으니 애초에 버튼이 안 뜨고, 같은 항목이 미입고/검증지연 상태라 재일정이 필요하면 "📅 재일정 수립" 버튼은 그대로 뜸(당기기와 별개 조건).)
      시험 스케줄 관리 시스템 V1.67.0 (🔁 미입고/검증지연 항목 "재일정 수립" 기능 추가 — 기존 "⏪ 당기기"(오늘~현재 시작일 사이의 빈 자리, 과거 방향)와 반대로 오늘 이후 미래(60일 이내)에서 빈 자리를 찾는 전용 호버 버튼 "📅 재일정 수립"을 계획막대 상태 팝오버에 추가(isRescheduleEligible = 관리자+isScheduleDelayed+!rescheduled). 원본 시트의 미입고 상태는 절대 건드리지 않는다는 요구사항에 맞춰, 기존 항목을 "이동"시키지 않고 같은 제목/장비로 새 일정을 별도 생성(saveSchedule)한 뒤, 원래 항목에는 "재일정 수립됨" 표시만 남김 — 앱 등록 일정은 Schedules 시트 'rescheduled' 컬럼에, 🔒 마스터 일정은 안정 키(eqId+rawContent) 기반 별도 시트 'MasterReschedule'에 저장(GAS V1.31.0, setMasterReschedule 액션). 표시가 남으면 ⚠️ 배지는 그대로 유지(원본 상태 그대로이므로)하되, 계획막대의 빨간 점선 강조(needsReschedule = isScheduleDelayed && !rescheduled)만 사라져 "이미 재일정 잡음"을 구분. 빈 자리가 없으면 밀어내기 후보 추천(신규 등록 모드, 차종/품목 자동 파싱해 미리 채움)으로 자동 연결.)
      시험 스케줄 관리 시스템 V1.66.0 (🎯 배광UNIT 소요시간 추정치를 placeholder가 아니라 입력칸 실제 값으로 자동 채우도록 변경 — schBeamHoursAutoFilled 플래그로 자동채움 상태를 추적, 사용자가 직접 값을 고치면(oninput) 그 뒤로는 자동 재계산이 덮어쓰지 않고, 명시적으로 저장된 값이 있는 수정 모달에서도 자동채움이 덮어쓰지 않음. 항목명/시작일/기간 변경 시에도 실시간으로 추정치 재계산(oninput/onchange 추가). 🔗 "시험계획표에도 반영" 체크박스 제거 — 일정 등록 모달(sch-push-appinput)과 자동계획 수립 모달(auto-push-appinput) 둘 다에서 체크박스를 없애고 기본 동작(항상 반영)으로 고정.)
@@ -588,6 +589,14 @@
       <div id="sch-beam-hours-wrap" class="hidden">
         <label class="field-label">🎯 하루 소요시간(시간) <span class="text-slate-400 font-normal normal-case">— 배광UNIT은 하루 12시간을 여러 건이 나눠 씁니다</span></label>
         <input id="sch-beam-hours" type="number" min="0.5" step="0.5" max="12" oninput="schBeamHoursAutoFilled=false" class="field-input" placeholder="예: 2">
+        <div class="mt-2">
+          <label class="field-label">🌙 시간대</label>
+          <select id="sch-beam-shift" class="field-input">
+            <option value="">자동 판정</option>
+            <option value="day">🔆 주간 고정</option>
+            <option value="night">🌙 야간 고정</option>
+          </select>
+        </div>
       </div>
       <div><label class="field-label">상세 설명</label><textarea id="sch-desc" rows="4" class="field-input resize-none"></textarea></div>
       <div id="sch-protected-wrap" class="hidden">
@@ -3432,6 +3441,45 @@ function beamUnitUsageOnDate(eqId, dateStr, pool, excludeId){
     && !(excludeId && sameId(s.id, excludeId)) && isDateInRange(dateStr, s.startDate, s.duration));
   return coveringToday.reduce((sum,s)=> sum+getEffectiveDailyHours(s, dateStr), 0);
 }
+
+// V1.70.0: 🌙 기존에 이미 잡혀있는 배광UNIT 일정에도 주간/야간 자동 판정을 소급 적용.
+// 마스터 일정의 id('master_행번호')에 원본 시트 우선순위 행 번호가 그대로 들어있으므로, 이 행
+// 번호가 낮을수록(=우선순위 1에 가까울수록) 주간일 가능성이 높다고 보고 그 순서로 채워나가다가
+// 누적 12시간을 넘기는 시점부터 야간으로 본다. 2일 이상 계획은 방침상 항상 주간으로 취급(밀어내기
+// 대상이 되는 임시 의뢰건이 아니라 이미 자리잡은 정규 계획으로 보고 제외). 앱 등록 일정(행 번호
+// 없음)은 순서상 마스터 일정들 뒤로 두고, id(생성시각 포함) 오름차순으로 동률 처리.
+function getMasterRowNumber(s){
+  if (!s || typeof s.id !== 'string' || s.id.indexOf('master_') !== 0) return null;
+  const n = parseInt(s.id.slice('master_'.length), 10);
+  return isNaN(n) ? null : n;
+}
+function computeIsNightAuto(schedule, dateStr, pool){
+  if ((parseInt(schedule.duration)||1) >= 2) return false; // 2일 이상은 항상 주간
+  const coveringToday = pool.filter(s=> s.eqId===schedule.eqId && s.status!=='deleted' && !isMaintenanceRecord(s)
+    && isDateInRange(dateStr, s.startDate, s.duration));
+  const alwaysDay = coveringToday.filter(s=> (parseInt(s.duration)||1) >= 2);
+  const candidates = coveringToday.filter(s=> (parseInt(s.duration)||1) < 2);
+  candidates.sort((a,b)=>{
+    const ra = getMasterRowNumber(a), rb = getMasterRowNumber(b);
+    if (ra!==null && rb!==null) return ra-rb;
+    if (ra!==null) return -1; // 마스터(행 번호 있음)가 앞
+    if (rb!==null) return 1;
+    return String(a.id).localeCompare(String(b.id));
+  });
+  let cum = alwaysDay.reduce((sum,s)=> sum+getEffectiveDailyHours(s, dateStr), 0);
+  for (const s of candidates){
+    const before = cum;
+    cum += getEffectiveDailyHours(s, dateStr);
+    if (sameId(s.id, schedule.id)) return before >= BEAM_UNIT_DAILY_CAPACITY - 1e-9;
+  }
+  return false;
+}
+// 수동 지정(shiftOverride)이 있으면 그걸 우선, 없으면 자동판정
+function isNightShift(schedule, dateStr, pool){
+  if (schedule.shiftOverride === 'day') return false;
+  if (schedule.shiftOverride === 'night') return true;
+  return computeIsNightAuto(schedule, dateStr, pool);
+}
 function getBarColorClass(s, eq){
   if (isMaintenanceRecord(s)) return isRepairRecord(s) ? 'bg-amber-600' : 'bg-slate-800'; // V1.57.0: 보수는 구분되는 주황 계열로
   if (isScheduleCompleted(s)) return 'bg-slate-300';
@@ -4105,7 +4153,7 @@ function renderCalendar(){
         const eq = getEq(s.eqId);
         const chip=document.createElement('div');
         chip.className = `calendar-item-chip ${getBarColorClass(s, eq)}`;
-        chip.innerText = `${isScheduleDelayed(s)?'⚠️ ':''}${eq?eq.icon:''} ${isMasterSchedule(s)?'🔒 ':''}${isScheduleCompleted(s)?'✅ ':''}${s.title}`;
+        chip.innerText = `${isScheduleDelayed(s)?'⚠️ ':''}${(isBeamUnit(eq)&&isNightShift(s,dateStr,schedules))?'🌙 ':''}${eq?eq.icon:''} ${isMasterSchedule(s)?'🔒 ':''}${isScheduleCompleted(s)?'✅ ':''}${s.title}`;
         chip.onclick=(ev)=>{ ev.stopPropagation(); openScheduleModal(canEdit()?'edit':'view', s); };
         if (needsReschedule(s)){ chip.style.outline = '1.5px dashed #f43f5e'; chip.style.outlineOffset = '1px'; }
         if (canSetProgressStatus(s) || isPullEligible(s) || isRescheduleEligible(s)){
@@ -4599,7 +4647,7 @@ function renderTimeline(){
       bar.style.textOverflow='ellipsis';
       const locked = isMasterSchedule(s);
       bar.title = `${locked?'[업무현황 자동연동] ':''}${s.title} (${s.startDate}, ${s.duration}일)${getStatusDisplayText(s)?' · '+getStatusDisplayText(s):''}`;
-      bar.innerText = `${locked?'🔒 ':''}${isScheduleCompleted(s)?'✅ ':''}${s.title}`;
+      bar.innerText = `${locked?'🔒 ':''}${(isBeamUnit(eq)&&(parseInt(s.duration)||1)===1&&isNightShift(s,s.startDate,schedules))?'🌙 ':''}${isScheduleCompleted(s)?'✅ ':''}${s.title}`;
       let suppressBarClick = false;
       bar.onclick=(ev)=>{
         ev.stopPropagation();
@@ -4967,13 +5015,14 @@ function openScheduleModal(mode, data){
   const explicitHours = getExplicitDailyHours(data);
   document.getElementById('sch-beam-hours').value = explicitHours ?? '';
   schBeamHoursAutoFilled = (explicitHours === null);
+  document.getElementById('sch-beam-shift').value = data.shiftOverride || '';
   toggleScheduleBeamHoursField();
 
   // 결과 리뷰: 기존 일정(저장된 적 있는 항목)에만 표시 — 새 일정 등록 시에는 아직 리뷰할 대상이 없으므로 숨김
   document.getElementById('sch-result-review-wrap').classList.toggle('hidden', !data.id);
   document.getElementById('sch-result-review').value = data.id ? getResultReview(data.id) : '';
 
-  const fields = ['sch-title','sch-eqid','sch-owner','sch-start','sch-duration','sch-desc','sch-result-review','sch-protected','sch-protect-reason','sch-beam-hours'];
+  const fields = ['sch-title','sch-eqid','sch-owner','sch-start','sch-duration','sch-desc','sch-result-review','sch-protected','sch-protect-reason','sch-beam-hours','sch-beam-shift'];
   fields.forEach(id=> document.getElementById(id).disabled = editingScheduleReadOnly);
 
   let tag = mode==='new' ? '신규 일정 등록' : (mode==='edit' ? '시험 정보 수정' : '시험 정보 조회 (읽기 전용)');
@@ -5132,6 +5181,7 @@ async function saveScheduleFromModal(){
       return;
     }
     schedule.dailyHours = hoursVal;
+    schedule.shiftOverride = document.getElementById('sch-beam-shift').value || ''; // V1.70.0
   }
   const reason = document.getElementById('sch-change-reason').value.trim();
   const pushToAppInput = !idVal && !isMaintenanceNew; // V1.66.0: "시험계획표에도 반영"은 신규 등록+고장/정비 아닌 경우 항상 기본 동작(체크박스 제거)
@@ -5160,6 +5210,10 @@ async function saveScheduleFromModal(){
         eqId: editingOriginalSchedule.eqId, rawContent: editingOriginalSchedule.rawContent,
         dailyHours: schedule.dailyHours, updatedBy: currentUser.username
       }).catch(()=>{ showToast('소요시간 저장에 실패했습니다.'); });
+      gasPost('setMasterShift', { // V1.70.0: 🌙 배광UNIT 주간/야간 수동 지정도 원본 셀 아닌 별도 저장소에
+        eqId: editingOriginalSchedule.eqId, rawContent: editingOriginalSchedule.rawContent,
+        shift: schedule.shiftOverride, updatedBy: currentUser.username
+      }).catch(()=>{ showToast('시간대 지정 저장에 실패했습니다.'); });
     }
     try {
       const res = await gasPost('updateMasterSchedule', { schedule, original: editingOriginalSchedule });
