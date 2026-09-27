@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- 시험 스케줄 관리 시스템 V1.70.0 (🌙 배광UNIT 기존 일정에도 주간/야간 소급 자동판정 추가 — 마스터 일정 id('master_행번호')에 원본 시트 우선순위 행 번호가 그대로 들어있는 점을 이용해, 같은 날짜에 걸린 1일짜리 항목들을 행 번호 오름차순(=우선순위 1에 가까울수록 먼저)으로 채워나가다 누적 12시간을 넘기는 시점부터 야간으로 판정(computeIsNightAuto). 2일 이상 계획은 방침상 항상 주간 고정(밀어내기 대상 임시 의뢰건이 아니라 이미 자리잡은 정규 계획으로 봄). 앱 등록 일정(행 번호 없음)은 마스터보다 뒤에 두고 id 오름차순 동률처리. 캘린더 단일일 칩과 타임라인 막대(1일짜리만 해당)에 🌙 표시. 자동판정이 틀렸을 때를 위해 "주간/야간 수동 지정" 기능도 추가 — 일정 등록/수정 모달의 배광UNIT 소요시간 입력란 아래 "🌙 시간대: 자동 판정/🔆 주간 고정/🌙 야간 고정" 선택 추가(isNightShift가 수동 지정을 자동판정보다 우선 적용). 앱 등록 일정은 Schedules 시트 'shiftOverride' 컬럼에, 🔒 마스터 일정은 안정 키(eqId+rawContent) 기반 별도 시트 'MasterShift'에 저장(GAS V1.32.0, setMasterShift 액션).)
+<!-- 시험 스케줄 관리 시스템 V1.71.0 (🔗 연계 시험 그룹 1단계 — 배광→진동→배광처럼 순서가 이어지는 시험들을 사후에 그룹으로 묶는 기능. 관리자 패널에 "🔗 연계 시험" 탭 신설 — 그룹 목록/새 그룹 만들기, 전용 모달(modal-sequence-editor)에서 제목 검색으로 시험을 찾아 추가하고 순서(▲▼)·최대간격(일, 기본 2)을 지정해 저장. 앱/마스터 일정을 섞어서 묶을 수 있도록 각 멤버는 memberKey로 식별(앱='app:'+id, 마스터='master:'+eqId+rawContent 안정키, GAS V1.33.0의 buildSequenceMemberKey). 새 시트 'SequenceGroups'(그룹메타)/'SequenceMembers'(소속·순서), 새 액션 saveSequenceGroup(생성·수정 겸용)/deleteSequenceGroup. readAll()이 각 일정에 sequenceGroupId/sequenceOrder를 붙여 반환, 클라이언트는 이 필드로만 그룹 조회(별도 키 재계산 불필요). 일정 상세 모달에 소속 그룹이 있으면 전체 순서를 안내하는 읽기 전용 박스 표시. ⚠️ 이번 1단계는 그룹으로 묶고 조회만 가능 — 날짜 변경 시 연쇄 재배치(2단계: 명확한 조작에서 자동 발동, 3단계: 드래그·밀어내기까지 전체 적용, 필요 시 해당 장비 밀어내기 자동 연동)는 아직 구현 안 됨, 다음 요청 시 이어서 진행.)
+     시험 스케줄 관리 시스템 V1.70.0 (🌙 배광UNIT 기존 일정에도 주간/야간 소급 자동판정 추가 — 마스터 일정 id('master_행번호')에 원본 시트 우선순위 행 번호가 그대로 들어있는 점을 이용해, 같은 날짜에 걸린 1일짜리 항목들을 행 번호 오름차순(=우선순위 1에 가까울수록 먼저)으로 채워나가다 누적 12시간을 넘기는 시점부터 야간으로 판정(computeIsNightAuto). 2일 이상 계획은 방침상 항상 주간 고정(밀어내기 대상 임시 의뢰건이 아니라 이미 자리잡은 정규 계획으로 봄). 앱 등록 일정(행 번호 없음)은 마스터보다 뒤에 두고 id 오름차순 동률처리. 캘린더 단일일 칩과 타임라인 막대(1일짜리만 해당)에 🌙 표시. 자동판정이 틀렸을 때를 위해 "주간/야간 수동 지정" 기능도 추가 — 일정 등록/수정 모달의 배광UNIT 소요시간 입력란 아래 "🌙 시간대: 자동 판정/🔆 주간 고정/🌙 야간 고정" 선택 추가(isNightShift가 수동 지정을 자동판정보다 우선 적용). 앱 등록 일정은 Schedules 시트 'shiftOverride' 컬럼에, 🔒 마스터 일정은 안정 키(eqId+rawContent) 기반 별도 시트 'MasterShift'에 저장(GAS V1.32.0, setMasterShift 액션).)
      시험 스케줄 관리 시스템 V1.69.0 (🎯🌙 배광UNIT 24시간(주간12h+야간12h) 실제 가동 모델 도입 — 원래 하루 12시간 소프트 상한만 있던 것을, 실제로는 24시간 근무체계(주간=일반 의뢰건 계획, 야간=양산품 정기시험 배경가동, capa 부족 시 야간 자리에 의뢰건 대체 편성)라는 운영 방식을 반영. 판단 기준을 사람이 매번 정하기보다, 밀어내기 모달에 이미 있던 소요시간 규칙(명시값 우선, 없으면 품목/기간 추정치)을 당기기·재일정 수립에도 그대로 재사용하고, 빈 자리 탐색을 2단계로 변경 — findReflowEmptySlots가 배광UNIT이면 ① 주간(12h) 안에서만 먼저 찾고 ② 하나도 없을 때만 야간 포함 24h로 재탐색(findBeamUnitEmptySlots 신설), 결과에 isNight 플래그를 달아 당기기/재일정 수립 슬롯 선택 화면에 🌙 배지로 표시. 이동/생성 확정 시 이때 쓴 소요시간을 dailyHours 명시값으로 확정 저장(앱 saveSchedule / 마스터 setMasterHours). 밀어내기 모달의 배광UNIT 전용 캐스케이드(computeReflowCascadeBeamUnit)도 동일하게 findNextFit을 2단계(주간→야간)로, ensureDayFits의 판정 기준을 12h→24h(BEAM_UNIT_HARD_CAPACITY)로 변경. 일정 등록/수정 모달의 저장 시 용량 경고(checkBeamUnitCapacityViolation)도 12h 초과가 아니라 24h(물리적 한계) 초과일 때만 뜨도록 완화 — 12~24h 구간은 야간 대체 편성으로 보고 마찰 없이 그냥 저장됨. 다만 "어떤 기존 항목이 이미 야간에 배정된 것인지"를 과거 데이터에서 자동으로 역추정하는 기능(캘린더/타임라인 막대의 상시 🌙 배지)은 판단 기준이 인위적일 수밖에 없어 이번 범위에서는 보류 — 이 도구들을 통해 새로 배치되는 항목만 그 순간에 확실히 알 수 있으므로 그 경우에만 표시.)
      시험 스케줄 관리 시스템 V1.68.0 (⏪ 당기기/단축 호버 버튼이 이미 시작일이 지난(오늘 이하) 일정에도 떠서 눌러도 "더 당길 수 없습니다" 토스트만 뜨던 문제 수정 — isPullEligible에 시작일이 오늘보다 미래인 경우만 조건 추가. 이미 지난 일정은 당길 데가 없으니 애초에 버튼이 안 뜨고, 같은 항목이 미입고/검증지연 상태라 재일정이 필요하면 "📅 재일정 수립" 버튼은 그대로 뜸(당기기와 별개 조건).)
      시험 스케줄 관리 시스템 V1.67.0 (🔁 미입고/검증지연 항목 "재일정 수립" 기능 추가 — 기존 "⏪ 당기기"(오늘~현재 시작일 사이의 빈 자리, 과거 방향)와 반대로 오늘 이후 미래(60일 이내)에서 빈 자리를 찾는 전용 호버 버튼 "📅 재일정 수립"을 계획막대 상태 팝오버에 추가(isRescheduleEligible = 관리자+isScheduleDelayed+!rescheduled). 원본 시트의 미입고 상태는 절대 건드리지 않는다는 요구사항에 맞춰, 기존 항목을 "이동"시키지 않고 같은 제목/장비로 새 일정을 별도 생성(saveSchedule)한 뒤, 원래 항목에는 "재일정 수립됨" 표시만 남김 — 앱 등록 일정은 Schedules 시트 'rescheduled' 컬럼에, 🔒 마스터 일정은 안정 키(eqId+rawContent) 기반 별도 시트 'MasterReschedule'에 저장(GAS V1.31.0, setMasterReschedule 액션). 표시가 남으면 ⚠️ 배지는 그대로 유지(원본 상태 그대로이므로)하되, 계획막대의 빨간 점선 강조(needsReschedule = isScheduleDelayed && !rescheduled)만 사라져 "이미 재일정 잡음"을 구분. 빈 자리가 없으면 밀어내기 후보 추천(신규 등록 모드, 차종/품목 자동 파싱해 미리 채움)으로 자동 연결.)
@@ -575,6 +576,7 @@
       <div class="px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-indigo-100 text-indigo-600" id="modal-schedule-tag">시험 정보</div>
       <button onclick="closeModal('modal-schedule')" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
     </div>
+    <div id="sch-sequence-info" class="hidden mb-4 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs"></div>
     <input id="sch-id" type="hidden">
     <div class="space-y-4">
       <div><label class="field-label">항목명</label><input id="sch-title" oninput="toggleScheduleBeamHoursField()" class="field-input text-lg font-bold"></div>
@@ -1131,6 +1133,7 @@
       <button id="admin-tab-requests" onclick="switchAdminTab('requests')" class="tab-btn active !text-xs !py-2">권한 요청함</button>
       <button id="admin-tab-users" onclick="switchAdminTab('users')" class="tab-btn !text-xs !py-2">회원 관리</button>
       <button id="admin-tab-holidays" onclick="switchAdminTab('holidays')" class="tab-btn !text-xs !py-2">🎌 공휴일 일괄등록</button>
+      <button id="admin-tab-sequences" onclick="switchAdminTab('sequences')" class="tab-btn !text-xs !py-2">🔗 연계 시험</button>
     </div>
     <div id="admin-panel-requests"></div>
     <div id="admin-panel-users" class="hidden"></div>
@@ -1141,6 +1144,42 @@
       </p>
       <button id="btn-bulk-add-holidays" onclick="bulkAddHolidays()" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 rounded-xl shadow-lg transition-all">🎌 2026~2035년 공휴일 일괄 등록하기</button>
       <p id="bulk-holidays-result" class="text-xs font-bold text-center mt-3"></p>
+    </div>
+    <div id="admin-panel-sequences" class="hidden">
+      <p class="text-xs text-slate-500 font-semibold mb-4 leading-relaxed">
+        배광→진동→배광처럼 순서가 이어지는 시험들을 그룹으로 묶어둘 수 있습니다. (1단계: 그룹으로 묶고 조회만 — 날짜가 바뀌어도 자동으로 같이 움직이진 않습니다. 자동 재배치는 다음 단계에서 추가될 예정입니다.)
+      </p>
+      <button onclick="openSequenceEditor(null)" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 rounded-xl shadow-lg transition-all mb-4">🔗 새 연계 시험 그룹 만들기</button>
+      <div id="sequence-group-list" class="space-y-2"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 모달: 연계 시험 그룹 만들기/수정 (V1.33.0) ===================== -->
+<div id="modal-sequence-editor" class="modal-overlay">
+  <div class="glass-card bg-white w-full max-w-lg rounded-[32px] p-5 sm:p-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
+    <div class="flex justify-between items-start mb-5">
+      <h3 class="text-lg font-bold text-slate-800">🔗 연계 시험 그룹</h3>
+      <button onclick="closeModal('modal-sequence-editor')" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+    </div>
+    <input type="hidden" id="seq-group-id">
+    <div class="space-y-4">
+      <div><label class="field-label">그룹 이름 (선택)</label><input id="seq-name" class="field-input" placeholder="예: QY2i HL 시퀀스"></div>
+      <div><label class="field-label">최대 간격(일) — 앞 시험 종료 후 이 기간 안에 다음 시험이 시작돼야 함</label><input id="seq-max-gap" type="number" min="0" value="2" class="field-input"></div>
+      <div>
+        <label class="field-label">시험 검색해서 추가</label>
+        <input id="seq-search" oninput="renderSequenceSearchResults()" class="field-input" placeholder="제목으로 검색 (예: QY2i HL)">
+        <div id="seq-search-results" class="mt-1.5 space-y-1 max-h-32 overflow-y-auto custom-scrollbar"></div>
+      </div>
+      <div>
+        <label class="field-label">순서 (위→아래)</label>
+        <div id="seq-member-list" class="space-y-1.5"></div>
+        <p id="seq-member-empty" class="text-xs text-slate-400 font-semibold py-2">위에서 검색해 시험을 추가해주세요 (2개 이상).</p>
+      </div>
+    </div>
+    <div class="mt-6 pt-4 border-t border-slate-100 flex gap-2">
+      <button onclick="saveSequenceGroup()" class="py-2.5 px-5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg shadow">저장</button>
+      <button id="seq-delete-btn" onclick="deleteSequenceGroup()" class="hidden py-2.5 px-5 bg-rose-50 text-rose-600 border border-rose-200 font-bold text-xs rounded-lg hover:bg-rose-100">그룹 삭제</button>
     </div>
   </div>
 </div>
@@ -1206,6 +1245,7 @@ let GAS_URL = '';
 let currentUser = null;   // {username, name, role}
 let users = [];
 let schedules = [];
+let sequenceGroups = []; // V1.33.0: 🔗 연계 시험 그룹 메타([{groupId,name,maxGapDays}])
 let permRequests = [];
 
 let currentView = 'calendar';
@@ -3921,6 +3961,7 @@ async function loadAllData(){
       users = res.data.users || [];
       schedules = (res.data.schedules || []).map(s => ({...s, duration: parseInt(s.duration)||1, startDate: normalizeDateStr(s.startDate)}));
       permRequests = res.data.requests || [];
+      sequenceGroups = res.data.sequences || []; // V1.33.0: 🔗 연계 시험 그룹 메타(이름/최대간격)
       loadAttendanceTypesFromSchedules(); // 근태유형 설정을 schedules 안의 설정 레코드에서 동기화
 
       // 내 권한이 서버에서 바뀌었을 수 있으므로(승인 등) 동기화
@@ -5029,6 +5070,21 @@ function openScheduleModal(mode, data){
   if (locked) tag = (mode==='view') ? '🔒 업무현황 자동연동 (읽기 전용)' : '🔒 업무현황 자동연동 — 저장 시 원본 시트에 반영됩니다';
   if (isMaintenanceRecord(data)) tag = isRepairRecord(data) ? '🟠 보수 (일부 조건 사용 가능)' : '🔴 고장 (설비사용 불가)'; // V1.57.0
   document.getElementById('modal-schedule-tag').innerText = tag;
+  // V1.33.0: 🔗 연계 시험 그룹 소속이면 전체 순서를 안내(읽기 전용 정보, 이 모달에서 그룹 편집은 안 됨)
+  const seqInfoEl = document.getElementById('sch-sequence-info');
+  if (data.sequenceGroupId){
+    const group = sequenceGroups.find(g=>g.groupId===data.sequenceGroupId);
+    const members = schedules.filter(s=>s.sequenceGroupId===data.sequenceGroupId).sort((a,b)=>(a.sequenceOrder||0)-(b.sequenceOrder||0));
+    const stepText = members.map((m,i)=>{
+      const eq = getEq(m.eqId);
+      const isSelf = sameId(m.id, data.id);
+      return `${isSelf?'<b>':''}${i+1}. ${eq?eq.icon:''}${m.title}(${m.startDate})${isSelf?' ← 이 일정</b>':''}`;
+    }).join(' → ');
+    seqInfoEl.innerHTML = `🔗 연계 시험 그룹${group&&group.name?` "${group.name}"`:''} (최대간격 ${group?group.maxGapDays:2}일)<br>${stepText}`;
+    seqInfoEl.classList.remove('hidden');
+  } else {
+    seqInfoEl.classList.add('hidden');
+  }
   document.getElementById('sch-save-btn').classList.toggle('hidden', editingScheduleReadOnly);
   document.getElementById('sch-delete-btn').classList.toggle('hidden', locked || mode!=='edit' || !canEdit());
   document.getElementById('sch-change-reason-wrap').classList.toggle('hidden', mode!=='edit');
@@ -5474,15 +5530,182 @@ async function bulkAddHolidays(){
   }
 }
 
+async function bulkAddHolidays(){
+  if (!confirm(`2026~2035년 공휴일 ${KOREAN_HOLIDAYS_2026_2035.length}건을 등록하시겠습니까?\n이미 등록된 항목은 자동으로 건너뜁니다.`)) return;
+  const btn = document.getElementById('btn-bulk-add-holidays');
+  const resultEl = document.getElementById('bulk-holidays-result');
+  btn.disabled = true;
+  btn.innerText = '등록 중... (몇 초 정도 걸릴 수 있어요)';
+  resultEl.innerText = '';
+
+  const payload = KOREAN_HOLIDAYS_2026_2035.map(h => ({
+    id: 'holi_' + h.date.replace(/-/g,'') + '_' + Math.random().toString(36).slice(2,6),
+    title: h.name,
+    eqId: 'holiday',
+    startDate: h.date,
+    duration: 1,
+    owner: '',
+    desc: '',
+    status: 'active',
+    createdBy: currentUser.username,
+    progressStatus: '진행'
+  }));
+
+  try {
+    const res = await gasPost('bulkAddSchedules', { schedules: payload });
+    if (res.status==='success'){
+      resultEl.className = 'text-xs font-bold text-center mt-3 text-emerald-600';
+      resultEl.innerText = `✅ ${res.added}건 등록 완료 (이미 있던 ${res.skipped}건은 건너뜀)`;
+      showToast('공휴일 일괄 등록이 완료되었습니다.');
+      await loadAllData();
+    } else {
+      resultEl.className = 'text-xs font-bold text-center mt-3 text-rose-500';
+      resultEl.innerText = '실패: ' + (res.message||'');
+    }
+  } catch(e){
+    resultEl.className = 'text-xs font-bold text-center mt-3 text-rose-500';
+    resultEl.innerText = '서버와 통신할 수 없습니다.';
+  } finally {
+    btn.disabled = false;
+    btn.innerText = '🎌 2026~2035년 공휴일 일괄 등록하기';
+  }
+}
+
+/* ---------- 🔗 연계 시험 그룹 (V1.33.0, 1단계: 수동 그룹핑 + 조회만) ---------- */
+// 편집 중인 그룹의 멤버 목록. 각 항목은 { scheduleId, title, startDate, duration, eqId, isMaster, rawContent } 형태로
+// 화면 표시에 필요한 정보를 그대로 들고 있어(원본 schedules 배열과 별개로) 순서 변경/저장 시 다시 조회할 필요가 없다.
+let seqEditorMembers = [];
+function memberFromSchedule(s){
+  return { scheduleId: s.id, title: s.title, startDate: s.startDate, duration: s.duration,
+    eqId: s.eqId, isMaster: isMasterSchedule(s), rawContent: s.rawContent || '' };
+}
+function sequenceEligible(s){
+  return !isHolidayOrEventType(s) && !isMaintenanceRecord(s)
+    && s.eqId!==ATTENDANCE_EQID && s.eqId!==ATTENDANCE_CONFIG_EQID && s.eqId!==RESULT_REVIEW_EQID;
+}
+function renderSequenceGroupList(){
+  const wrap = document.getElementById('sequence-group-list');
+  if (!sequenceGroups.length){ wrap.innerHTML = `<p class="text-xs text-slate-400 font-semibold py-2">아직 만들어진 연계 시험 그룹이 없습니다.</p>`; return; }
+  wrap.innerHTML = sequenceGroups.map(g=>{
+    const members = schedules.filter(s=>s.sequenceGroupId===g.groupId).sort((a,b)=>(a.sequenceOrder||0)-(b.sequenceOrder||0));
+    const preview = members.map(s=>{ const eq=getEq(s.eqId); return `${eq?eq.icon:''}${s.title}(${s.startDate})`; }).join(' → ');
+    return `<div class="p-3 bg-slate-50 border border-slate-100 rounded-xl">
+      <div class="flex items-center justify-between gap-2">
+        <div class="text-xs font-bold text-slate-700">${g.name || '(이름 없음)'} <span class="text-slate-400 font-semibold">· 최대간격 ${g.maxGapDays}일 · ${members.length}단계</span></div>
+        <button onclick="openSequenceEditor('${g.groupId}')" class="text-[11px] font-bold text-indigo-600 hover:underline whitespace-nowrap">수정</button>
+      </div>
+      <div class="text-[11px] text-slate-500 font-semibold mt-1 truncate">${preview || '(멤버 없음)'}</div>
+    </div>`;
+  }).join('');
+}
+function openSequenceEditor(groupId){
+  document.getElementById('seq-group-id').value = groupId || '';
+  document.getElementById('seq-search').value = '';
+  document.getElementById('seq-search-results').innerHTML = '';
+  document.getElementById('seq-delete-btn').classList.toggle('hidden', !groupId);
+  if (groupId){
+    const g = sequenceGroups.find(x=>x.groupId===groupId);
+    document.getElementById('seq-name').value = g ? g.name : '';
+    document.getElementById('seq-max-gap').value = g ? g.maxGapDays : 2;
+    seqEditorMembers = schedules.filter(s=>s.sequenceGroupId===groupId)
+      .sort((a,b)=>(a.sequenceOrder||0)-(b.sequenceOrder||0)).map(memberFromSchedule);
+  } else {
+    document.getElementById('seq-name').value = '';
+    document.getElementById('seq-max-gap').value = 2;
+    seqEditorMembers = [];
+  }
+  renderSequenceMemberList();
+  openModal('modal-sequence-editor');
+}
+function renderSequenceSearchResults(){
+  const q = document.getElementById('seq-search').value.trim().toLowerCase();
+  const resultsEl = document.getElementById('seq-search-results');
+  if (!q){ resultsEl.innerHTML = ''; return; }
+  const already = new Set(seqEditorMembers.map(m=>String(m.scheduleId)));
+  const matches = schedules.filter(s=> sequenceEligible(s) && !already.has(String(s.id)) && s.title.toLowerCase().includes(q)).slice(0,8);
+  resultsEl.innerHTML = matches.map(s=>{
+    const eq = getEq(s.eqId);
+    return `<button type="button" onclick="addSequenceMember('${s.id}')" class="w-full text-left text-[11px] font-bold bg-white hover:bg-indigo-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+      ${eq?eq.icon:''} ${s.title} <span class="text-slate-400 font-semibold">· ${s.startDate} (${s.duration}일)</span>
+    </button>`;
+  }).join('') || `<p class="text-[11px] text-slate-400 font-semibold py-1">일치하는 시험이 없습니다.</p>`;
+}
+function addSequenceMember(scheduleId){
+  const s = schedules.find(x=>sameId(x.id, scheduleId));
+  if (!s) return;
+  seqEditorMembers.push(memberFromSchedule(s));
+  document.getElementById('seq-search').value = '';
+  document.getElementById('seq-search-results').innerHTML = '';
+  renderSequenceMemberList();
+}
+function removeSequenceMember(idx){ seqEditorMembers.splice(idx,1); renderSequenceMemberList(); }
+function moveSequenceMember(idx, dir){
+  const j = idx+dir;
+  if (j<0 || j>=seqEditorMembers.length) return;
+  const tmp = seqEditorMembers[idx]; seqEditorMembers[idx]=seqEditorMembers[j]; seqEditorMembers[j]=tmp;
+  renderSequenceMemberList();
+}
+function renderSequenceMemberList(){
+  const wrap = document.getElementById('seq-member-list');
+  document.getElementById('seq-member-empty').classList.toggle('hidden', seqEditorMembers.length>0);
+  wrap.innerHTML = seqEditorMembers.map((m,i)=>{
+    const eq = getEq(m.eqId);
+    return `<div class="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">
+      <span class="text-[10px] font-black text-slate-400 w-4">${i+1}</span>
+      <span class="flex-1 text-[11px] font-bold text-slate-700 truncate">${m.isMaster?'🔒 ':''}${eq?eq.icon:''} ${m.title} <span class="text-slate-400 font-semibold">· ${m.startDate} (${m.duration}일)</span></span>
+      <button type="button" onclick="moveSequenceMember(${i},-1)" class="text-slate-400 hover:text-slate-700 text-xs font-bold px-1">▲</button>
+      <button type="button" onclick="moveSequenceMember(${i},1)" class="text-slate-400 hover:text-slate-700 text-xs font-bold px-1">▼</button>
+      <button type="button" onclick="removeSequenceMember(${i})" class="text-rose-400 hover:text-rose-600 text-xs font-bold px-1">✕</button>
+    </div>`;
+  }).join('');
+}
+async function saveSequenceGroup(){
+  if (seqEditorMembers.length < 2){ showToast('시험을 2개 이상 추가해주세요.'); return; }
+  const groupId = document.getElementById('seq-group-id').value || null;
+  const payload = {
+    groupId: groupId,
+    name: document.getElementById('seq-name').value.trim(),
+    maxGapDays: parseInt(document.getElementById('seq-max-gap').value) || 2,
+    updatedBy: currentUser.username,
+    members: seqEditorMembers.map(m=> m.isMaster
+      ? { isMaster: true, eqId: m.eqId, rawContent: m.rawContent }
+      : { isMaster: false, id: m.scheduleId })
+  };
+  try {
+    const res = await gasPost('saveSequenceGroup', payload);
+    if (res.status!=='success') throw new Error(res.message||'저장 실패');
+    showToast('연계 시험 그룹을 저장했습니다.');
+    closeModal('modal-sequence-editor');
+    await loadAllData();
+    renderSequenceGroupList();
+  } catch(e){ showToast('저장 중 오류: '+e.message); }
+}
+async function deleteSequenceGroup(){
+  const groupId = document.getElementById('seq-group-id').value;
+  if (!groupId) return;
+  if (!confirm('이 연계 시험 그룹을 삭제하시겠습니까? (개별 시험 일정 자체는 삭제되지 않습니다)')) return;
+  try {
+    const res = await gasPost('deleteSequenceGroup', { groupId });
+    if (res.status!=='success') throw new Error(res.message||'삭제 실패');
+    showToast('그룹을 삭제했습니다.');
+    closeModal('modal-sequence-editor');
+    await loadAllData();
+    renderSequenceGroupList();
+  } catch(e){ showToast('삭제 중 오류: '+e.message); }
+}
+
 function switchAdminTab(tab){
   document.getElementById('admin-tab-requests').classList.toggle('active', tab==='requests');
   document.getElementById('admin-tab-users').classList.toggle('active', tab==='users');
   document.getElementById('admin-tab-holidays').classList.toggle('active', tab==='holidays');
+  document.getElementById('admin-tab-sequences').classList.toggle('active', tab==='sequences');
   document.getElementById('admin-panel-requests').classList.toggle('hidden', tab!=='requests');
   document.getElementById('admin-panel-users').classList.toggle('hidden', tab!=='users');
   document.getElementById('admin-panel-holidays').classList.toggle('hidden', tab!=='holidays');
+  document.getElementById('admin-panel-sequences').classList.toggle('hidden', tab!=='sequences');
   if (tab==='requests') renderAdminRequests();
   else if (tab==='users') renderAdminUsers();
+  else if (tab==='sequences') renderSequenceGroupList();
 }
 
 function renderAdminRequests(){
