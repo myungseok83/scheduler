@@ -1,7 +1,9 @@
 /**
  * ===============================================================
  * 시험 스케줄 관리 시스템 - Google Apps Script 백엔드
- * VERSION: V9.0
+ * VERSION: V9.1
+ * - [출력] 💧 습기 1호는 환경챔버와 같은 규칙(기간 전체 사용)으로 바뀌어 방치 표시 제외 — 2·3호만 방치 표시(웹앱 V9.12와 동일)
+ * [V9.0]
  * - [보안] 🔑 접속 비밀번호: 스크립트 속성 ACCESS_CODE를 넣으면, 그 비밀번호를 모르는 요청은 모두 거절(읽기·저장·가입 전부)
  *   · ACCESS_CODE가 없으면 지금처럼 열림 · 예외: ?action=version, ?action=checkAccess(비번 확인용)
  * [V8.9]
@@ -561,7 +563,7 @@
  * ===============================================================
  */
 
-const GAS_VERSION = 'V9.0';
+const GAS_VERSION = 'V9.1';
 
 const SHEET_USERS = 'Users';
 const SHEET_SCHEDULES = 'Schedules';
@@ -3168,7 +3170,7 @@ const EXPORT_HM_SOAK_COLOR = '#bae6fd', EXPORT_HM_SOAK_FONT = '#0c4a6e';
 function addHumidityStorageVirtuals(items) {
   const add = [];
   items.forEach(function (o) {
-    if (o.eqId.indexOf('hm_') !== 0 || o.virtual) return;
+    if (o.eqId.indexOf('hm_') !== 0 || o.eqId === 'hm_1' || o.virtual) return; // V9.1: 습기 1호는 기간 전체 사용(환경챔버 규칙) → 방치 없음
     if (isExportMaintenance(o)) return; // V6.1: 고장·보수 기록은 시료가 없으니 방치 없음
     if (o.status === '미입고' || o.status === '검증지연' || o.status === '지연') return;
     if (o.dur < 2) return;
