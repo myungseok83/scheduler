@@ -1,0 +1,47 @@
+# GAS 자동 배포: gas/Code.js 가 바뀌어 main 에 올라오면 Apps Script 에 반영 + 기존 웹앱 배포(URL 그대로) 갱신
+# 필요한 저장소 Secrets: CLASPRC_JSON, GAS_SCRIPT_ID, GAS_DEPLOYMENT_ID
+name: Deploy GAS
+on:
+  push:
+    branches: [main]
+    paths: ['gas/**']
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Secrets 확인
+        id: chk
+        env:
+          C: ${{ secrets.CLASPRC_JSON }}
+          S: ${{ secrets.GAS_SCRIPT_ID }}
+          D: ${{ secrets.GAS_DEPLOYMENT_ID }}
+        run: |
+          if [ -z "$C" ] || [ -z "$S" ] || [ -z "$D" ]; then
+            echo "::warning::Secrets 미설정 — GAS 배포를 건너뜁니다"; echo "ok=0" >> $GITHUB_OUTPUT
+          else echo "ok=1" >> $GITHUB_OUTPUT; fi
+      - uses: actions/setup-node@v4
+        if: steps.chk.outputs.ok == '1'
+        with: { node-version: '20' }
+      - name: Apps Script 반영 및 배포
+        if: steps.chk.outputs.ok == '1'
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          GAS_SCRIPT_ID: ${{ secrets.GAS_SCRIPT_ID }}
+          GAS_DEPLOYMENT_ID: ${{ secrets.GAS_DEPLOYMENT_ID }}
+        run: |
+          set -e
+          npm i -g @google/clasp@2.4.2
+          echo "$CLASPRC_JSON" > ~/.clasprc.json
+          mkdir build && cd build
+          clasp clone "$GAS_SCRIPT_ID"          # 현재 프로젝트(설정파일 appsscript.json 포함) 그대로 받아오기
+          ls -la
+          # 서버 코드 파일이 1개면 그 파일을 gas/Code.js 로 교체 (파일명 유지)
+          mapfile -t F < <(ls *.js *.gs 2>/dev/null || true)
+          if [ ${#F[@]} -eq 1 ]; then cp ../gas/Code.js "${F[0]}"
+          elif [ -f Code.js ]; then cp ../gas/Code.js Code.js
+          else echo "::error::서버 코드 파일이 여러 개라 어느 것을 바꿀지 모름: ${F[*]}"; exit 1; fi
+          clasp push -f
+          VER=$(grep -m1 -o 'VERSION: *V[0-9.]*' ../gas/Code.js | sed 's/VERSION: *//')
+          clasp deploy -i "$GAS_DEPLOYMENT_ID" -d "auto ${VER:-update} $(date +%F)"
