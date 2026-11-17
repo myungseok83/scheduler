@@ -43,5 +43,8 @@ jobs:
           elif [ -f Code.js ]; then cp ../gas/Code.js Code.js
           else echo "::error::서버 코드 파일이 여러 개라 어느 것을 바꿀지 모름: ${F[*]}"; exit 1; fi
           clasp push -f
+          clasp deployments || true            # 실패 시 확인용: 현재 배포 ID 목록(마지막 글자 일부만 표시)
+          # 배포 ID: 공백 제거, 웹앱 URL 전체를 넣었어도 /s/ 와 /exec 사이 값만 사용
+          DID=$(echo "$GAS_DEPLOYMENT_ID" | tr -d '[:space:]' | sed -E 's#.*/s/([^/]+).*#\1#')
           VER=$(grep -m1 -o 'VERSION: *V[0-9.]*' ../gas/Code.js | sed 's/VERSION: *//')
-          clasp deploy -i "$GAS_DEPLOYMENT_ID" -d "auto ${VER:-update} $(date +%F)"
+          clasp deploy -i "$DID" -d "auto ${VER:-update} $(date +%F)"
