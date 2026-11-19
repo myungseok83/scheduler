@@ -1,7 +1,9 @@
 /**
  * ===============================================================
  * 시험 스케줄 관리 시스템 - Google Apps Script 백엔드
- * VERSION: V9.1
+ * VERSION: V9.2
+ * - [기능추가] ✏️ 변경 이력 사유 수정 — 새 액션 updateHistoryReason({id, reason, updatedBy})
+ * [V9.1]
  * - [출력] 💧 습기 1호는 환경챔버와 같은 규칙(기간 전체 사용)으로 바뀌어 방치 표시 제외 — 2·3호만 방치 표시(웹앱 V9.12와 동일)
  * [V9.0]
  * - [보안] 🔑 접속 비밀번호: 스크립트 속성 ACCESS_CODE를 넣으면, 그 비밀번호를 모르는 요청은 모두 거절(읽기·저장·가입 전부)
@@ -563,7 +565,7 @@
  * ===============================================================
  */
 
-const GAS_VERSION = 'V9.1';
+const GAS_VERSION = 'V9.2';
 
 const SHEET_USERS = 'Users';
 const SHEET_SCHEDULES = 'Schedules';
@@ -701,6 +703,7 @@ function routePostAction(action, body) {
     case 'deleteUser': return handleDeleteUser(body);
     case 'changePassword': return handleChangePassword(body);
     case 'addHistory': return handleAddHistory(body);
+    case 'updateHistoryReason': return handleUpdateHistoryReason(body); // V9.2
     case 'reassignScheduleHistory': return handleReassignScheduleHistory(body); // V1.34.0
     case 'updateProgressStatus': return handleUpdateProgressStatus(body);
     case 'pushToAppInput': return handlePushToAppInput(body);
@@ -2468,6 +2471,23 @@ function handleAddHistory(body) {
     changedAt: new Date().toISOString(), oldSummary: h.oldSummary || '', newSummary: h.newSummary || '', reason: h.reason || '', stableKey: stableKey };
   sh.appendRow(headers.map(function (name) { return values[name] !== undefined ? values[name] : ''; }));
   return { status: 'success' };
+}
+
+// V9.2: ✏️ 이미 기록된 변경 이력의 사유를 나중에 적거나 고침 (id로 행을 찾아 reason 칸만 바꿈)
+function handleUpdateHistoryReason(body) {
+  if (!body || !body.id) return { status: 'fail', message: '잘못된 요청입니다.' };
+  const sh = historySheet();
+  const data = sh.getDataRange().getValues();
+  const headers = data[0];
+  const idCol = headers.indexOf('id'), reasonCol = headers.indexOf('reason');
+  if (idCol === -1 || reasonCol === -1) return { status: 'fail', message: '이력 시트 구조를 확인할 수 없습니다.' };
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][idCol]) === String(body.id)) {
+      sh.getRange(i + 1, reasonCol + 1).setValue(String(body.reason || '').slice(0, 500));
+      return { status: 'success' };
+    }
+  }
+  return { status: 'fail', message: '해당 이력을 찾을 수 없습니다.' };
 }
 
 // V1.34.0: 마스터 반영 중복 정리 등으로 앱 등록 일정 id가 사라지고 다른 id(마스터 버전)로 대체될 때,
