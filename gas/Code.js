@@ -1,7 +1,10 @@
 /**
  * ===============================================================
  * 시험 스케줄 관리 시스템 - Google Apps Script 백엔드
- * VERSION: V9.2
+ * VERSION: V9.3
+ * - [출력] 🔗 연계시험 시각 표시 강화 — 제목 앞 '🔗①-2/3'(그룹 번호-단계/전체), 월별 계획표·간트차트 막대에 보라 점선 테두리,
+ *   새 탭 '🔗 연계시험'(그룹별 단계·장비·기간·앞 단계와 간격 한눈에)
+ * [V9.2]
  * - [기능추가] ✏️ 변경 이력 사유 수정 — 새 액션 updateHistoryReason({id, reason, updatedBy})
  * [V9.1]
  * - [출력] 💧 습기 1호는 환경챔버와 같은 규칙(기간 전체 사용)으로 바뀌어 방치 표시 제외 — 2·3호만 방치 표시(웹앱 V9.12와 동일)
@@ -565,7 +568,7 @@
  * ===============================================================
  */
 
-const GAS_VERSION = 'V9.2';
+const GAS_VERSION = 'V9.3';
 
 const SHEET_USERS = 'Users';
 const SHEET_SCHEDULES = 'Schedules';
@@ -3069,11 +3072,13 @@ function seqNoText(n) { // V8.6: 웹앱과 같은 원문자(①~㊿, 그 뒤는 
 function exportSeqMarks(items) { // V8.6: memberKey(master:장비::원문 / app:id) → 원문자
   let seqs = []; try { seqs = readSequences(); } catch (e) { return; }
   const mk = {};
-  seqs.forEach(function (g) { if (!g.no) return; const t = seqNoText(Number(g.no)); g.members.forEach(function (m) { mk[String(m.memberKey)] = t; }); });
+  seqs.forEach(function (g) { if (!g.no) return; const t = seqNoText(Number(g.no)); const total = g.members.length;
+    g.members.forEach(function (m, i) { mk[String(m.memberKey)] = { t: t, step: i + 1, total: total, gid: g.groupId, name: g.name, no: Number(g.no), maxGap: g.maxGapDays }; }); });
   items.forEach(function (o) {
     if (o.virtual) return;
     const key = o.src === 'master' ? 'master:' + buildProtectionKey(o.eqId, o.raw) : 'app:' + o.id;
-    if (mk[key]) o.seq = mk[key];
+    const h = mk[key];
+    if (h){ o.seq = '🔗' + h.t + '-' + h.step + '/' + h.total; o.seqInfo = h; } // V9.3: 그룹번호-단계/전체
   });
 }
 function exportBarColor(o, shade) {
@@ -3321,6 +3326,7 @@ function renderMonthTab(ess, key, data, ctx) { // V6.4: ctx = 현장기록 보�
 
   const groupBottoms = [];
   const startCells = []; // V8.1: 시험 시작 칸(A1 주소)
+  const seqRanges = []; // V9.3: 연계시험 막대 범위
   const unitBlocks = []; // V5.9: [시작행, 행수] — 장비번호 병합용
   const nameBlocks = []; // V5.9: [시작행, 행수] — 시험장비명 병합용
   EXPORT_EQUIPMENTS.forEach(function (eq) {
@@ -3346,6 +3352,7 @@ function renderMonthTab(ess, key, data, ctx) { // V6.4: ctx = 현장기록 보�
       const rowIdx = startRow + o._lane, color = st[0], font = st[1];
       const firstD = new Date(Math.max(o.start, first));
       startCells.push(sheetA1(rowIdx + 1, 3 + (firstD.getDate() - 1) * 2 + 1)); // 시작 칸 왼쪽 굵은 선
+      if (o.seq) { const lastD = new Date(Math.min(o.end, last)); seqRanges.push(sheetA1(rowIdx + 1, 3 + (firstD.getDate() - 1) * 2 + 1) + ':' + sheetA1(rowIdx + 1, 3 + (lastD.getDate() - 1) * 2 + 2)); } // V9.3
       const text = exportDelayPrefix(o) + (o.night ? '🌙 ' : '') + (o.prot ? '🛡️ ' : '') + o.text; // V7.2: [미입고] 등
       for (let d = new Date(Math.max(o.start, first)); d <= o.end && d <= last; d.setDate(d.getDate() + 1)) {
         const col = 3 + (d.getDate() - 1) * 2;
@@ -3405,6 +3412,7 @@ function renderMonthTab(ess, key, data, ctx) { // V6.4: ctx = 현장기록 보�
   sh.getRange(4, 1, R - 3, W).setBorder(true, true, true, true, true, false, '#cbd5e1', SpreadsheetApp.BorderStyle.SOLID);
   groupBottoms.forEach(function (rb) { sh.getRange(rb, 1, 1, W).setBorder(null, null, true, null, null, null, '#475569', SpreadsheetApp.BorderStyle.SOLID_MEDIUM); });
   sh.getRange(7, 1, 1, W).setBorder(null, null, true, null, null, null, '#475569', SpreadsheetApp.BorderStyle.SOLID_MEDIUM); // V7.8: 근태 줄 아래 굵은 구분선
+  drawSeqBorders(sh, seqRanges); // V9.3
   drawStartLines(sh, startCells); // V8.1
   // V5.9: 같은 시험장비명 / 같은 장비번호 세로 병합(가운데 정렬)
   nameBlocks.forEach(function (b) { if (b[1] > 1) sh.getRange(b[0], 1, b[1], 1).merge(); });
@@ -3648,11 +3656,61 @@ function sheetA1(row, col) {
   while (n > 0) { const m = (n - 1) % 26; c = String.fromCharCode(65 + m) + c; n = Math.floor((n - 1) / 26); }
   return c + row;
 }
+// V9.3: 🔗 연계시험 막대 — 보라 점선 테두리(A1 범위 목록)
+const EXPORT_SEQ_LINE = '#7c3aed';
+function drawSeqBorders(sh, ranges) {
+  for (let i = 0; i < ranges.length; i += 300) {
+    try { sh.getRangeList(ranges.slice(i, i + 300)).setBorder(true, true, true, true, null, null, EXPORT_SEQ_LINE, SpreadsheetApp.BorderStyle.DASHED); }
+    catch (e) { Logger.log('연계 테두리 표시 실패: ' + e); }
+  }
+}
 function drawStartLines(sh, cells) {
   for (let i = 0; i < cells.length; i += 400) {
     try { sh.getRangeList(cells.slice(i, i + 400)).setBorder(null, true, null, null, null, null, EXPORT_START_LINE, SpreadsheetApp.BorderStyle.SOLID_THICK); }
     catch (e) { Logger.log('시작선 표시 실패: ' + e); }
   }
+}
+
+// ---------------- V9.3: 🔗 연계시험 한눈에 ----------------
+const SEQ_TAB = '🔗 연계시험';
+function renderSeqTab(ess, data) {
+  const tz = Session.getScriptTimeZone();
+  const eqName = {}; EXPORT_EQUIPMENTS.forEach(function (e) { eqName[e[0]] = e[1] + ' ' + e[2]; });
+  const byG = {};
+  data.items.forEach(function (o) { if (o.seqInfo) (byG[o.seqInfo.gid] = byG[o.seqInfo.gid] || []).push(o); });
+  const groups = Object.keys(byG).map(function (k) { const l = byG[k].sort(function (a, b) { return a.seqInfo.step - b.seqInfo.step; }); return l; })
+    .sort(function (a, b) { return a[0].seqInfo.no - b[0].seqInfo.no; });
+  const header = ['번호', '그룹명', '최대간격(근무일)', '단계', '장비', '시작일', '종료일', '기간(일)', '앞 단계 종료 후', '제목', '상태'];
+  const rows = [], bgs = [], blocks = [];
+  groups.forEach(function (l, gi) {
+    const s0 = rows.length + 2, bg = gi % 2 ? '#f5f3ff' : '#ede9fe';
+    l.forEach(function (o, i) {
+      const prev = i ? l[i - 1] : null;
+      const gap = prev ? Math.round((o.start - prev.end) / 86400000) : null;
+      rows.push([i ? '' : o.seqInfo.t, i ? '' : o.seqInfo.name, i ? '' : o.seqInfo.maxGap, o.seqInfo.step + '/' + o.seqInfo.total, eqName[o.eqId] || o.eqId,
+        Utilities.formatDate(o.start, tz, 'yyyy-MM-dd'), Utilities.formatDate(o.end, tz, 'yyyy-MM-dd'), o.dur,
+        gap == null ? '-' : (gap < 1 ? '⚠️ 순서 역전(' + gap + '일)' : gap + '일 뒤'), o.title, o.status || '']);
+      bgs.push(header.map(function () { return bg; }));
+    });
+    blocks.push([s0, l.length]);
+  });
+  let sh = ess.getSheetByName(SEQ_TAB);
+  if (!sh) sh = ess.insertSheet(SEQ_TAB);
+  if (sh.getFilter()) sh.getFilter().remove();
+  sh.clear();
+  const R = Math.max(2, rows.length + 1), W = header.length;
+  if (sh.getMaxRows() < R) sh.insertRowsAfter(sh.getMaxRows(), R - sh.getMaxRows());
+  if (sh.getMaxColumns() < W) sh.insertColumnsAfter(sh.getMaxColumns(), W - sh.getMaxColumns());
+  sh.getRange(1, 1, 1, W).setValues([header]).setFontWeight('bold').setBackground('#7c3aed').setFontColor('#ffffff');
+  if (rows.length) {
+    sh.getRange(2, 1, rows.length, W).setValues(rows).setBackgrounds(bgs).setFontSize(10).setFontFamily(EXPORT_FONT).setVerticalAlignment('middle');
+    sh.getRange(2, 1, rows.length, 1).setFontSize(14).setFontWeight('bold').setFontColor('#6d28d9').setHorizontalAlignment('center');
+    blocks.forEach(function (b) { sh.getRange(b[0], 1, b[1], W).setBorder(true, true, true, true, null, null, EXPORT_SEQ_LINE, SpreadsheetApp.BorderStyle.SOLID_MEDIUM); });
+    const warn = rows.map(function (r) { return [String(r[8]).indexOf('⚠️') === 0 ? '#e11d48' : '#334155']; });
+    sh.getRange(2, 9, rows.length, 1).setFontColors(warn);
+  } else sh.getRange(2, 1).setValue('표시할 연계시험이 없습니다.');
+  sh.setFrozenRows(1);
+  sh.setColumnWidth(1, 50); sh.setColumnWidth(2, 160); sh.setColumnWidth(5, 110); sh.setColumnWidth(9, 130); sh.setColumnWidth(10, 320);
 }
 
 // ---------------- V8.0: 📊 간트차트 ----------------
@@ -3714,7 +3772,7 @@ function renderGanttTab(ess, data) {
   const hn = blank(''); for (let i = 0; i < days; i++) { const d = new Date(start); d.setDate(d.getDate() + i); const h = holidaySet[Utilities.formatDate(d, tz, 'yyyy-MM-dd')]; if (h) hn[C0 + i] = '🎌 ' + h; }
   push(hw, hb.slice(), hf.slice()); push(hd, hb.slice(), hf.slice(), hn); push(hy, hb.slice(), hf.slice());
   const HEAD = values.length; // 4
-  const unitBlocks = [], nameBlocks = [], groupBottoms = [], gStartCells = [];
+  const unitBlocks = [], nameBlocks = [], groupBottoms = [], gStartCells = [], gSeqRanges = []; // V9.3
   EXPORT_EQUIPMENTS.forEach(function (eq) {
     const list = data.items.filter(function (o) { return o.eqId === eq[0] && o.end >= start && o.start <= end; })
       .sort(function (a, b) { return (a.start - b.start) || (b.dur - a.dur); });
@@ -3733,6 +3791,7 @@ function renderGanttTab(ess, data) {
       const row = startRow + o._glane, color = st[0], font = st[1];
       const a = Math.max(0, dayIdx(o.start)), b = Math.min(days - 1, dayIdx(o.end));
       gStartCells.push(sheetA1(row + 1, C0 + a + 1));
+      if (o.seq) gSeqRanges.push(sheetA1(row + 1, C0 + a + 1) + ':' + sheetA1(row + 1, C0 + b + 1)); // V9.3
       const label = exportDelayPrefix(o) + (o.night ? '🌙 ' : '') + (o.virtual ? (o.half ? '💧½ ' : '💧 ') : '') + o.title;
       // V8.2: 막대 안 글자 없음 — 메모(전체 내용)를 막대 모든 칸에
       const note = (o.virtual ? label + '\n' : exportDelayPrefix(o)) + o.text + '\n(' + Utilities.formatDate(o.start, tz, 'M/d') + ' ~ ' + Utilities.formatDate(o.end, tz, 'M/d') + ', ' + o.dur + '일)';
@@ -3815,6 +3874,7 @@ function renderGanttTab(ess, data) {
     if (d.getDay() === 1) sh.getRange(2, C0 + 1 + i, R - 1, 1).setBorder(null, true, null, null, null, null, '#94a3b8', SpreadsheetApp.BorderStyle.SOLID);
   }
   groupBottoms.forEach(function (rb) { sh.getRange(rb, 1, 1, W).setBorder(null, null, true, null, null, null, '#475569', SpreadsheetApp.BorderStyle.SOLID_MEDIUM); });
+  drawSeqBorders(sh, gSeqRanges); // V9.3
   drawStartLines(sh, gStartCells); // V8.1
   const ti = dayIdx(today);
   if (ti >= 0 && ti < days) sh.getRange(2, C0 + 1 + ti, R - 1, 1).setBorder(null, true, null, true, null, null, '#dc2626', SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
@@ -4054,6 +4114,7 @@ function exportDirty(deadline) {
     renderListTab(ess, data, ctx);
     try { renderCalendarTab(ess, data, allowed, ctx); } catch (eCal) { Logger.log('캘린더 탭 갱신 실패: ' + eCal); } // V6.3
     try { renderGanttTab(ess, data); } catch (eG) { Logger.log('간트차트 탭 갱신 실패: ' + eG); } // V8.0
+    try { renderSeqTab(ess, data); } catch (eSq) { Logger.log('연계시험 탭 갱신 실패: ' + eSq); } // V9.3
     try { renderUnplacedTab(ess, data, ctx); } catch (eUn) { Logger.log('미반영 기록 탭 갱신 실패: ' + eUn); } // V6.4
     doneKeys.push('LIST');
   }
