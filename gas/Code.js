@@ -1,7 +1,9 @@
 /**
  * ===============================================================
  * 시험 스케줄 관리 시스템 - Google Apps Script 백엔드
- * VERSION: V9.3
+ * VERSION: V9.4
+ * - [출력] 💧 습기 방치 챔버를 계획마다 바꿀 수 있게(웹앱 V9.39) — 앱 설정 레코드 'hm_storage_config'를 읽어 반영
+ * [V9.3]
  * - [출력] 🔗 연계시험 시각 표시 강화 — 제목 앞 '🔗①-2/3'(그룹 번호-단계/전체), 월별 계획표·간트차트 막대에 보라 점선 테두리,
  *   새 탭 '🔗 연계시험'(그룹별 단계·장비·기간·앞 단계와 간격 한눈에)
  * [V9.2]
@@ -568,7 +570,7 @@
  * ===============================================================
  */
 
-const GAS_VERSION = 'V9.3';
+const GAS_VERSION = 'V9.4';
 
 const SHEET_USERS = 'Users';
 const SHEET_SCHEDULES = 'Schedules';
@@ -3177,7 +3179,7 @@ function collectExportData() {
   masters.forEach(function (m) { const o = norm(m, 'master'); if (o) items.push(o); });
   apps.forEach(function (s) {
     const eq = String(s.eqId || '');
-    if (eq === 'attendance_config') return;
+    if (eq === 'attendance_config' || eq === 'hm_storage_config') return; // V9.4
     const o = norm(s, 'app'); if (!o) return;
     if (eq === 'holiday') { holidays.push(o); return; }
     if (eq === 'event') { events.push(o); return; }
@@ -3186,25 +3188,29 @@ function collectExportData() {
     items.push(o);
   });
   exportSeqMarks(items); // V8.6
-  addHumidityStorageVirtuals(items); // V6.0
+  addHumidityStorageVirtuals(items, apps); // V6.0 · V9.4: 방치 챔버 변경 반영
   return { items: items, holidays: holidays, events: events, attendance: attendance };
 }
 
 // V6.0: 💧 습기시험 방치(웹앱 getHumidityStorageVirtuals와 같은 규칙) — 마지막날 6호(½일), 전날 7호, 그 앞은 8호
 const EXPORT_HM_SOAK_COLOR = '#bae6fd', EXPORT_HM_SOAK_FONT = '#0c4a6e';
-function addHumidityStorageVirtuals(items) {
+function addHumidityStorageVirtuals(items, apps) {
   const add = [];
+  let ov = {}; // V9.4: { '습기장비|시작일|제목': {e,p,l} }
+  try { const c = (apps || []).filter(function (a) { return String(a.eqId) === 'hm_storage_config' && a.status !== 'deleted'; })[0]; if (c && c.desc) ov = JSON.parse(c.desc) || {}; } catch (e) { ov = {}; }
+  const tz = Session.getScriptTimeZone();
   items.forEach(function (o) {
     if (o.eqId.indexOf('hm_') !== 0 || o.eqId === 'hm_1' || o.virtual) return; // V9.1: 습기 1호는 기간 전체 사용(환경챔버 규칙) → 방치 없음
     if (isExportMaintenance(o)) return; // V6.1: 고장·보수 기록은 시료가 없으니 방치 없음
     if (o.status === '미입고' || o.status === '검증지연' || o.status === '지연') return;
     if (o.dur < 2) return;
     let cur = null;
+    const ovr = ov[o.eqId + '|' + Utilities.formatDate(o.start, tz, 'yyyy-MM-dd') + '|' + String(o.title || '').trim()] || {};
     for (let i = 0; i < o.dur; i++) {
       const fromEnd = o.dur - 1 - i;
-      const eqId = fromEnd === 0 ? 'env_6' : fromEnd === 1 ? 'env_7' : 'env_8';
+      const eqId = fromEnd === 0 ? (ovr.l || 'env_6') : fromEnd === 1 ? (ovr.p || 'env_7') : (ovr.e || 'env_8');
       const day = new Date(o.start); day.setDate(day.getDate() + i);
-      if (cur && cur.eqId === eqId && !cur.half) { cur.dur++; cur.end = new Date(day); continue; }
+      if (cur && cur.eqId === eqId && !cur.half && fromEnd !== 0) { cur.dur++; cur.end = new Date(day); continue; } // V9.4: 마지막날 ½은 따로
       const half = fromEnd === 0;
       cur = { id: 'hmv_' + o.id + '_' + i, src: 'virtual', virtual: true, half: half, eqId: eqId, title: o.title, owner: o.owner, desc: '',
         start: new Date(day), end: new Date(day), dur: 1, status: '', night: false, prot: false,
