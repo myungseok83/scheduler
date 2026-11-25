@@ -1,7 +1,9 @@
 /**
  * ===============================================================
  * 시험 스케줄 관리 시스템 - Google Apps Script 백엔드
- * VERSION: V9.4
+ * VERSION: V9.5
+ * - [기능추가] 📥 현장 진행결과 가져오기(웹앱 V9.50) — 'getFieldResults': 출력시트 월별 탭(전전달~다음 달) 진행결과 칸을
+ *   다시 읽어 '_현장기록'에 보관한 뒤, 일정별 기록 목록을 웹앱에 돌려줌(웹앱에서 미리보기 후 진행상태에 반영)
  * - [출력] 💧 습기 방치 챔버를 계획마다 바꿀 수 있게(웹앱 V9.39) — 앱 설정 레코드 'hm_storage_config'를 읽어 반영
  * [V9.3]
  * - [출력] 🔗 연계시험 시각 표시 강화 — 제목 앞 '🔗①-2/3'(그룹 번호-단계/전체), 월별 계획표·간트차트 막대에 보라 점선 테두리,
@@ -709,6 +711,7 @@ function routePostAction(action, body) {
     case 'changePassword': return handleChangePassword(body);
     case 'addHistory': return handleAddHistory(body);
     case 'updateHistoryReason': return handleUpdateHistoryReason(body); // V9.2
+    case 'getFieldResults': return handleGetFieldResults(body); // V9.5
     case 'reassignScheduleHistory': return handleReassignScheduleHistory(body); // V1.34.0
     case 'updateProgressStatus': return handleUpdateProgressStatus(body);
     case 'pushToAppInput': return handlePushToAppInput(body);
@@ -3638,6 +3641,25 @@ function renderUnplacedTab(ess, data, ctx) {
   [1, 90, 110, 280, 70, 120, 220, 50].forEach(function (w, i) { if (i) sh.setColumnWidth(i + 1, w); });
   sh.setFrozenRows(2);
   protectExportSheet(sh, rows.length ? [sh.getRange(3, 8, rows.length, 1)] : []);
+}
+// V9.5: 📥 웹앱 '현장 결과 가져오기' — 최근 탭을 바로 다시 읽고 기록 전체(근태 제외)를 돌려줌
+function handleGetFieldResults(body) {
+  const ess = exportSpreadsheet(false);
+  if (!ess) return { status: 'fail', message: '출력시트가 아직 없습니다.' };
+  const ctx = loadFieldCtx(ess);
+  const now = new Date();
+  for (let k = -2; k <= 1; k++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + k, 1);
+    harvestFieldTab(ess, d.getFullYear() + '년 ' + (d.getMonth() + 1) + '월', ctx);
+  }
+  if (ctx.changed) { saveFieldCtx(ess, ctx); addExportDirty(['LIST']); }
+  const items = [];
+  Object.keys(ctx.records).forEach(function (k) {
+    if (k.indexOf('att|') === 0) return;
+    const r = ctx.records[k];
+    items.push({ key: k, id: r.id, date: r.date, eq: r.eq, title: r.title, value: r.value, updatedAt: r.updatedAt });
+  });
+  return { status: 'success', items: items, at: now.toISOString() };
 }
 // 5분마다: 이번 달·전후 달 탭의 현장 기록만 읽어 보관(다시 그리지 않음) → 바뀌었으면 캘린더·목록·미반영 갱신 예약
 function harvestRecentField() {
