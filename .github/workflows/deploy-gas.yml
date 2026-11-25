@@ -47,4 +47,11 @@ jobs:
           # 배포 ID: 공백 제거, 웹앱 URL 전체를 넣었어도 /s/ 와 /exec 사이 값만 사용
           DID=$(echo "$GAS_DEPLOYMENT_ID" | tr -d '[:space:]' | sed -E 's#.*/s/([^/]+).*#\1#')
           VER=$(grep -m1 -o 'VERSION: *V[0-9.]*' ../gas/Code.js | sed 's/VERSION: *//')
-          clasp deploy -i "$DID" -d "auto ${VER:-update} $(date +%F)"
+          OUT=$(clasp deploy -i "$DID" -d "auto ${VER:-update} $(date +%F)"); echo "$OUT"
+          # 웹앱이 실제로 쓰는 배포(URL)도 같은 버전으로 갱신 — Secret의 배포 ID와 다르면 새 코드가 웹앱에 안 닿음
+          APP_DID="AKfycbzWTx0jmhri2m3T_M_OtXDg8bMbTZwNt1NUTdU2oLMl8RNS8lzUTl5rVu78nIygDO8QrA"
+          V=$(echo "$OUT" | grep -o 'Created version [0-9]*' | grep -o '[0-9]*$' || true)
+          if [ "$APP_DID" != "$DID" ]; then
+            if [ -n "$V" ]; then clasp deploy -i "$APP_DID" -V "$V" -d "auto ${VER:-update} $(date +%F)"
+            else clasp deploy -i "$APP_DID" -d "auto ${VER:-update} $(date +%F)"; fi
+          fi
