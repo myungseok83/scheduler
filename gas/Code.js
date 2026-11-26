@@ -1,7 +1,8 @@
 /**
  * ===============================================================
  * 시험 스케줄 관리 시스템 - Google Apps Script 백엔드
- * VERSION: V9.8
+ * VERSION: V9.9
+ * - [출력] 연계 막대 테두리 원복(V9.3 방식: 연보라 점선) — 그룹별 색 굵은 선은 되돌림. 순번 굵게(V9.8)는 유지
  * - [출력] 연계 순번 글자 크기는 그대로(9) 두고 굵게만 — 행 높이(30px) 넘지 않게
  * - [출력] 🔗 연계시험 식별 강화 — 같은 연계 그룹은 막대 테두리를 그룹별 색의 굵은 실선으로(①빨강 ②파랑 ③초록…, 모든 탭 같은 색),
  *   월별 탭 막대 글자 앞 순번(🔗①-1/5)은 굵고 크게. '🔗 연계시험' 탭 번호 칸도 같은 색으로 표시
@@ -3726,7 +3727,7 @@ function drawSeqBorders(sh, ranges) { // ranges: [{a1, no}] (예전 형식 문�
   Object.keys(byColor).forEach(function (c) {
     const list = byColor[c];
     for (let i = 0; i < list.length; i += 300) {
-      try { sh.getRangeList(list.slice(i, i + 300)).setBorder(true, true, true, true, null, null, c, SpreadsheetApp.BorderStyle.SOLID_THICK); }
+      try { sh.getRangeList(list.slice(i, i + 300)).setBorder(true, true, true, true, null, null, EXPORT_SEQ_LINE, SpreadsheetApp.BorderStyle.DASHED); } // V9.9: 원복
       catch (e) { Logger.log('연계 테두리 표시 실패: ' + e); }
     }
   });
@@ -3772,8 +3773,7 @@ function renderSeqTab(ess, data) {
   if (rows.length) {
     sh.getRange(2, 1, rows.length, W).setValues(rows).setBackgrounds(bgs).setFontSize(10).setFontFamily(EXPORT_FONT).setVerticalAlignment('middle');
     sh.getRange(2, 1, rows.length, 1).setFontSize(14).setFontWeight('bold').setFontColor('#6d28d9').setHorizontalAlignment('center');
-    blocks.forEach(function (b) { const c = seqGroupColor(b[2]); sh.getRange(b[0], 1, b[1], W).setBorder(true, true, true, true, null, null, c, SpreadsheetApp.BorderStyle.SOLID_THICK);
-      sh.getRange(b[0], 1, b[1], 1).setBackground(c).setFontColor('#ffffff').setFontWeight('bold').setFontSize(13); }); // V9.7: 그룹 색 = 출력 탭 테두리 색
+    blocks.forEach(function (b) { sh.getRange(b[0], 1, b[1], W).setBorder(true, true, true, true, null, null, EXPORT_SEQ_LINE, SpreadsheetApp.BorderStyle.SOLID_MEDIUM); }); // V9.9: 원복
     const warn = rows.map(function (r) { return [String(r[8]).indexOf('⚠️') === 0 ? '#e11d48' : '#334155']; });
     sh.getRange(2, 9, rows.length, 1).setFontColors(warn);
   } else sh.getRange(2, 1).setValue('표시할 연계시험이 없습니다.');
