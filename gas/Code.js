@@ -1,7 +1,8 @@
 /**
  * ===============================================================
  * 시험 스케줄 관리 시스템 - Google Apps Script 백엔드
- * VERSION: V9.7
+ * VERSION: V9.8
+ * - [출력] 연계 순번 글자 크기는 그대로(9) 두고 굵게만 — 행 높이(30px) 넘지 않게
  * - [출력] 🔗 연계시험 식별 강화 — 같은 연계 그룹은 막대 테두리를 그룹별 색의 굵은 실선으로(①빨강 ②파랑 ③초록…, 모든 탭 같은 색),
  *   월별 탭 막대 글자 앞 순번(🔗①-1/5)은 굵고 크게. '🔗 연계시험' 탭 번호 칸도 같은 색으로 표시
  * - [기능추가] 📷 일정 상세 설명·결과 리뷰 이미지 붙여넣기(웹앱 V9.51) — 'uploadImage': base64 이미지를 드라이브
@@ -3422,9 +3423,9 @@ function renderMonthTab(ess, key, data, ctx) { // V6.4: ctx = 현장기록 보�
   all.setFontColors(fcs.map(function (r) { return r.map(function (c) { return c || '#000000'; }); })); // V5.7
   all.setFontFamily(EXPORT_FONT); // V5.9
   all.setNotes(notes); // V6.8: 마우스를 올리면 전체 내용
-  // V9.7: 🔗 순번(①-1/5)을 굵고 크게 — 연계 막대가 있는 행만 서식 글자로 다시 씀(행마다 한 번)
+  // V9.7: 🔗 순번(①-1/5)을 굵게 — 연계 막대가 있는 행만 서식 글자로 다시 씀(행마다 한 번)
   try {
-    const seqStyle = SpreadsheetApp.newTextStyle().setBold(true).setFontSize(11).build();
+    const seqStyle = SpreadsheetApp.newTextStyle().setBold(true).build(); // V9.8: 크기는 그대로(행 높이 유지)
     Object.keys(seqRich).forEach(function (ri) {
       const row = values[ri], marks = seqRich[ri], rich = [];
       for (let c = 3; c < W; c++) {
