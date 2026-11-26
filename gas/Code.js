@@ -1,7 +1,9 @@
 /**
  * ===============================================================
  * 시험 스케줄 관리 시스템 - Google Apps Script 백엔드
- * VERSION: V9.5
+ * VERSION: V9.6
+ * - [기능추가] 📷 일정 상세 설명·결과 리뷰 이미지 붙여넣기(웹앱 V9.51) — 'uploadImage': base64 이미지를 드라이브
+ *   '시험스케줄_메모이미지' 폴더에 저장하고 표시용 주소를 돌려줌(메모 이미지와 같은 방식)
  * - [기능추가] 📥 현장 진행결과 가져오기(웹앱 V9.50) — 'getFieldResults': 출력시트 월별 탭(전전달~다음 달) 진행결과 칸을
  *   다시 읽어 '_현장기록'에 보관한 뒤, 일정별 기록 목록을 웹앱에 돌려줌(웹앱에서 미리보기 후 진행상태에 반영)
  * - [출력] 💧 습기 방치 챔버를 계획마다 바꿀 수 있게(웹앱 V9.39) — 앱 설정 레코드 'hm_storage_config'를 읽어 반영
@@ -712,6 +714,7 @@ function routePostAction(action, body) {
     case 'addHistory': return handleAddHistory(body);
     case 'updateHistoryReason': return handleUpdateHistoryReason(body); // V9.2
     case 'getFieldResults': return handleGetFieldResults(body); // V9.5
+    case 'uploadImage': return handleUploadImage(body); // V9.6
     case 'reassignScheduleHistory': return handleReassignScheduleHistory(body); // V1.34.0
     case 'updateProgressStatus': return handleUpdateProgressStatus(body);
     case 'pushToAppInput': return handlePushToAppInput(body);
@@ -2595,6 +2598,14 @@ function uploadImageToDrive(base64, mimeType, name) {
   return `https://drive.google.com/thumbnail?id=${file.getId()}&sz=w1000`;
 }
 
+// V9.6: 📷 일정 상세 설명·결과 리뷰 이미지 1장 업로드
+function handleUploadImage(body) {
+  if (!body || !body.base64) return { status: 'fail', message: '이미지가 없습니다.' };
+  if (String(body.base64).length > 15 * 1024 * 1024) return { status: 'fail', message: '이미지가 너무 큽니다.' };
+  const mt = /^image\/(png|jpeg|gif|webp)$/.test(String(body.mimeType || '')) ? body.mimeType : 'image/jpeg';
+  return { status: 'success', url: uploadImageToDrive(body.base64, mt, String(body.name || 'schedule.jpg').slice(0, 80)) };
+}
+
 // [수동 실행용] 이 함수를 Apps Script 편집기에서 직접 한 번 실행하면 드라이브 접근 권한 승인창이 뜹니다.
 function testDrivePermission() {
   const folder = getOrCreateMemoImageFolder();
@@ -3182,7 +3193,7 @@ function collectExportData() {
   masters.forEach(function (m) { const o = norm(m, 'master'); if (o) items.push(o); });
   apps.forEach(function (s) {
     const eq = String(s.eqId || '');
-    if (eq === 'attendance_config' || eq === 'hm_storage_config') return; // V9.4
+    if (eq === 'attendance_config' || eq === 'hm_storage_config' || eq === 'sample_supply_config' || eq === 'attach_config') return; // V9.4 / V9.6: 설정·첨부 레코드는 출력 안 함
     const o = norm(s, 'app'); if (!o) return;
     if (eq === 'holiday') { holidays.push(o); return; }
     if (eq === 'event') { events.push(o); return; }
